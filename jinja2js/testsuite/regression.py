@@ -1,19 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-    jinja2.testsuite.regression
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    Tests corner cases and bugs.
-
-    :copyright: (c) 2010 by the Jinja Team.
-    :license: BSD, see LICENSE for more details.
-"""
 import unittest
 
 from jinja2.testsuite import JinjaTestCase
+from jinja2 import DictLoader, TemplateSyntaxError, TemplateNotFound, PrefixLoader
 
-from jinja2 import Template, Environment, DictLoader, TemplateSyntaxError, \
-     TemplateNotFound, PrefixLoader
+from jinja2js.testsuite import Template, Environment
 
 env = Environment()
 

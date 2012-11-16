@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 import unittest
-from jinja2.testsuite import JinjaTestCase
 
-from jinja2 import Markup, Environment
+from jinja2.testsuite import JinjaTestCase
+from jinja2 import Markup
+
+from jinja2js.testsuite import Environment
 
 env = Environment()
 

@@ -1,17 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-    jinja2.testsuite.filters
-    ~~~~~~~~~~~~~~~~~~~~~~~~
-
-    Tests for the jinja filters.
-
-    :copyright: (c) 2010 by the Jinja Team.
-    :license: BSD, see LICENSE for more details.
-"""
 import unittest
-from jinja2.testsuite import JinjaTestCase
 
-from jinja2 import Markup, Environment
+from jinja2.testsuite import JinjaTestCase
+from jinja2 import Markup
+
+from jinja2js.testsuite import Environment
 
 env = Environment()
 
@@ -105,7 +98,6 @@ class FilterTestCase(JinjaTestCase):
             '300 Bytes|3.0 kB|3.0 MB|3.0 GB|3.0 TB|300 Bytes|'
             '2.9 KiB|2.9 MiB'
         ))
-
 
     def test_first(self):
         tmpl = env.from_string('{{ foo|first }}')
@@ -269,7 +261,7 @@ class FilterTestCase(JinjaTestCase):
         tmpl = env.from_string('{{ 21.3|round(-1)}}|'
                                "{{ 21.3|round(-1, 'ceil')}}|"
                                "{{ 21.3|round(-1, 'floor')}}")
-        assert tmpl.render() == '20.0|30.0|20.0',tmpl.render()
+        assert tmpl.render() == '20.0|30.0|20.0', tmpl.render()
 
     def test_xmlattr(self):
         tmpl = env.from_string("{{ {'foo': 42, 'bar': 23, 'fish': none, "
@@ -296,8 +288,10 @@ class FilterTestCase(JinjaTestCase):
         class Magic(object):
             def __init__(self, value):
                 self.value = value
+
             def __unicode__(self):
                 return unicode(self.value)
+
         tmpl = env.from_string('''{{ items|sort(attribute='value')|join }}''')
         assert tmpl.render(items=map(Magic, [3, 2, 4, 1])) == '1234'
 
@@ -329,10 +323,12 @@ class FilterTestCase(JinjaTestCase):
                 self.day = day
                 self.month = month
                 self.year = year
+
         class Article(object):
             def __init__(self, title, *date):
                 self.date = Date(*date)
                 self.title = title
+
         articles = [
             Article('aha', 1, 1, 1970),
             Article('interesting', 2, 1, 1970),

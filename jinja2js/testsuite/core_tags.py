@@ -1,19 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-    jinja2.testsuite.core_tags
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    Test the core tags like for and if.
-
-    :copyright: (c) 2010 by the Jinja Team.
-    :license: BSD, see LICENSE for more details.
-"""
 import unittest
 
 from jinja2.testsuite import JinjaTestCase
+from jinja2 import TemplateSyntaxError, UndefinedError, DictLoader
 
-from jinja2 import Environment, TemplateSyntaxError, UndefinedError, \
-     DictLoader
+from jinja2js.testsuite import Environment
 
 env = Environment()
 

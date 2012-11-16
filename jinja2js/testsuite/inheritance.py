@@ -1,18 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-    jinja2.testsuite.inheritance
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    Tests the template inheritance feature.
-
-    :copyright: (c) 2010 by the Jinja Team.
-    :license: BSD, see LICENSE for more details.
-"""
 import unittest
 
 from jinja2.testsuite import JinjaTestCase
+from jinja2 import DictLoader
 
-from jinja2 import Environment, DictLoader
+from jinja2js.testsuite import Environment
 
 
 LAYOUTTEMPLATE = '''\
