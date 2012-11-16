@@ -16,3 +16,4 @@ Refferences
 
 4. [jasinja](https://bitbucket.org/djc/jasinja) - parent of this project
 
+5. [pwt.jinja2js](https://github.com/mkerrin/pwt.jinja2js) - very similar project, but with many dependencies
