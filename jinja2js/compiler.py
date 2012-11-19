@@ -3,15 +3,111 @@ from StringIO import StringIO
 from copy import deepcopy
 
 from jinja2 import nodes
+from jinja2.optimizer import optimize
 from jinja2.visitor import NodeVisitor, Frame, EvalContext
 from jinja2.exceptions import TemplateAssertionError
 
+from filters import filters, filter_args
+from tests import tests
+from utils import utils
 
-class CodeGenerator(NodeVisitor):
+# todo: remove JS prefix
 
-	def __init__(self, stream):
-		self.stream = stream or StringIO()
+
+def _get_template(env, name=None, source=None):
+	if name:
+		source, filename, _ = env.loader.get_source(env, name)
+	else:
+		name, filename = '<template>', '<template>'
+	ast = env._parse(source, name, filename)
+	if env.optimized:
+		ast = optimize(ast, env)
+	return name, filename, ast
+
+
+class Functions(object):
+
+    def __init__(self):
+        self.declared = set()
+        self.undeclared = set()
+
+    def use(self, name):
+    	if name not in self.declared:
+    		self.undeclared.add(name)
+
+	@property
+	def for_declaration(self):
+		while self.undeclared:
+			x = self.undeclared.pop()
+			self.declared.add(x)
+			yield x
+
+	def copy(self):
+		return deepcopy(self)
+
+
+class Scope(object):
+
+	def __init__(self):
+		self.templates = Functions()
+		self.filters = Functions()
+		self.tests = Functions()
+		self.utils = Functions()
+
+	def copy(self):
+		return deepcopy(self)
+
+
+class CodeGenerator(CodeGenerator, NodeVisitor):
+
+	def __init__(self, environment, scope=None, stream=None):
+		self.environment = environment
+		self.scope = scope or Scope()
+		self.stream = stream or StringIO()ƒ
 		self.indentation = 0
+
+	def generate(self, templates=None, source=None):
+		self.line('var Jinja = Jinja || {templates:{}, filters:{}, tests:{}, utils:{}};')
+		self.begin('(function(Jinja) {')
+		if source:
+			self.generate_template(source=source)
+		if templates:
+			for name in templates:
+				self.generate_template(name=name)
+		for name in self.scope.templates.for_declaration:
+			self.generate_template(name=name)
+		for name in self.scope.filters.for_declaration:
+			self.generate_filter(name)
+		for name in self.scope.tests.for_declaration:
+			self.generate_test(name)
+		for name in self.scope.utils.for_declaration:
+			self.generate_utils(name)
+		self.end('}(Jinja));')
+
+	def generate_template(self, name=None, source=None):
+		name, filename, ast = _get_template(self.environment, name, source)
+		if not isinstance(ast, nodes.Template):
+			raise TypeError('Can\'t compile non template nodes')
+		self.name = name
+		self.filename = filename
+		self.visit(ast)
+
+	def generate_filter(self, name):
+		if name not in filters:
+			raise TypeError('Can\'t find javascript realization of filter %s' % name)
+		self.write('Jinja.filters.%s = %s' % name, filters[name])
+
+	def generate_test(self, name):
+		if name not in tests:
+			raise TypeError('Can\'t find javascript realization of test %s' % name)
+		self.write('Jinja.tests.%s = %s' % name, tests[name])
+
+	def generate_utils(self, name):
+		if name not in utils:
+			raise TypeError('Can\'t find javascript realization of %s' % name)
+		self.write('Jinja.utils.%s = %s' % name, utils[name])
+
+	## shortcuts ##
 
 	def indent(self):
 		self.indentation += 1
@@ -34,59 +130,10 @@ class CodeGenerator(NodeVisitor):
 		self.outdent()
 		self.line(x)
 
-
-class JSRegister(object):
-
-    def __init__(self):
-        self.declared = set()
-        self.undeclared = set()
-
-    def add(self, name):
-        self.undeclared.discard(name)
-        self.declared.add(name)
-
-    def is_declared(self, name):
-        return name in self.declared
-
-    def copy(self):
-        return deepcopy(self)
-
-
-class JSScope(object):
-
-	def __init__(self):
-		self.templates = JSRegister()
-		self.filters = JSRegister()
-		self.tests = JSRegister()
-		self.utils = JSRegister()
-
-
-class JSCodeGenerator(CodeGenerator, NodeVisitor):
-
-	def __init__(self, environment, scope=None, stream=None):
-		super(JSCodeGenerator, self).__init__(stream)
-		self.environment = environment
-		self.scope = scope or JSScope()
-
-	def begin_scope(self, stream):
-		self.line('var Jinja = Jinja || {};')
-		self.begin('(function(Jinja) {')
-		self.line('Jinja.templates = Jinja.templates || {};')
-
-	def add_template(self, name, filename, node):
-		if not isinstance(node, nodes.Template):
-			raise TypeError('Can\'t compile non template nodes')
-		self.name = name
-		self.filename = filename
-		self.visit(node)
-
-	def end_scope(self, stream):
-		self.end('}(Jinja));')
-
 	def fail(self, msg, lineno):
 		raise TemplateAssertionError(msg, lineno, self.name, self.filename)
 
-	## VISITORS ##
+	## visitors ##
 
 	def jsmacro(self, node, frame):
 
@@ -130,7 +177,8 @@ class JSCodeGenerator(CodeGenerator, NodeVisitor):
 		self.end('}')
 
 	def visit_Include(self, node, frame):
-		self.write('%s.push(Jasinja.templates[' % frame.buffer)
+		self.scope.templates.use(node.template)
+		self.write('%s.push(Jinja.templates[' % frame.buffer)
 		self.visit(node.template, frame)
 		self.write('].render(ctx));')
 
@@ -170,11 +218,13 @@ class JSCodeGenerator(CodeGenerator, NodeVisitor):
 
 		extends = node.find(nodes.Extends)
 		if extends:
-			self.write('return Jasinja.templates[')
+			self.scope.templates.use(extends.template)
+			self.write('return Jinja.templates[')
 			self.visit(extends.template, frame)
 			self.write('].render(ctx, this);')
 		else:
-			self.line('tmpl = Jasinja.utils.extend(this, tmpl);')
+			self.scope.utils.use('extend')
+			self.line('tmpl = Jinja.utils.extend(this, tmpl);')
 			self.line('var %s = [];' % frame.buffer)
 			for n in node.body:
 				self.visit(n, frame)
@@ -220,7 +270,8 @@ class JSCodeGenerator(CodeGenerator, NodeVisitor):
 			self.visit(n, local)
 
 		bits = frame.buffer, node.filter.name, local.buffer
-		self.line('%s.push(Jasinja.filters.%s(%s.join("")));' % bits)
+		self.scope.filters.use(node.filter.name)
+		self.line('%s.push(Jinja.filters.%s(%s.join("")));' % bits)
 
 	def visit_Assign(self, node, frame):
 
@@ -295,7 +346,8 @@ class JSCodeGenerator(CodeGenerator, NodeVisitor):
 		if isinstance(node.arg, nodes.Slice):
 
 			assert node.arg.step is None
-			self.write('Jasinja.utils.slice(')
+			self.scope.utils.use('slice')
+			self.write('Jinja.utils.slice(')
 			self.visit(node.node, frame)
 			self.write(', ')
 
@@ -343,8 +395,8 @@ class JSCodeGenerator(CodeGenerator, NodeVisitor):
 		frame.identifiers.declared.add(loopvar)
 		frame.identifiers.declared.add('loop')
 		if node.test:
-
-			self.write('var f%s = Jasinja.utils.loop(' % loopvar)
+			self.scope.utils.use('loop')
+			self.write('var f%s = Jinja.utils.loop(' % loopvar)
 			self.visit(node.iter, frame)
 			self.write(');')
 
@@ -361,7 +413,8 @@ class JSCodeGenerator(CodeGenerator, NodeVisitor):
 			self.write('g%s.push(f%s.iter[f%s.i]);' % bits)
 			self.end('}')
 
-		self.write('var %s = Jasinja.utils.loop(' % loopvar)
+		self.scope.utils.use('loop')
+		self.write('var %s = Jinja.utils.loop(' % loopvar)
 		if not node.test:
 			self.visit(node.iter, frame)
 		else:
@@ -387,8 +440,8 @@ class JSCodeGenerator(CodeGenerator, NodeVisitor):
 			self.line('loop = _pre_loop;')
 
 	def visit_Filter(self, node, frame):
-
-		self.write('Jasinja.filters.' + node.name + '(')
+		self.scope.filters.use(node.name)
+		self.write('Jinja.filters.' + node.name + '(')
 		self.visit(node.node, frame)
 
 		if not node.args and not node.kwargs:
@@ -420,7 +473,8 @@ class JSCodeGenerator(CodeGenerator, NodeVisitor):
 		self.write(')')
 
 	def visit_Test(self, node, frame):
-		self.write('Jasinja.tests.' + node.name + '(')
+		self.scope.tests.use(node.name)
+		self.write('Jinja.tests.' + node.name + '(')
 		self.visit(node.node, frame)
 		self.write(')')
 
@@ -429,7 +483,8 @@ class JSCodeGenerator(CodeGenerator, NodeVisitor):
 		self.visit(node.node, frame)
 
 	def visit_Concat(self, node, frame):
-		self.write('Jasinja.utils.strjoin(')
+		self.scope.utils.use('strjoin')
+		self.write('Jinja.utils.strjoin(')
 		first = True
 		for n in node.nodes:
 			if not first:
@@ -468,7 +523,8 @@ class JSCodeGenerator(CodeGenerator, NodeVisitor):
 		oper = node.ops[0]
 		if oper.op == 'notin':
 			self.write('!')
-		self.write('Jasinja.utils.contains(')
+		self.scope.utils.use('contains')
+		self.write('Jinja.utils.contains(')
 		self.visit(node.expr, frame)
 		self.write(', ')
 		self.visit(oper.expr, frame)
