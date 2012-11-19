@@ -1,24 +1,18 @@
 # -*- coding: utf-8 -*-
-import sys
-from os import path
-from tempfile import mkstemp
-from subprocess import Popen, PIPE
+import unittest
+from tempfile import NamedTemporaryFile
+from subprocess import Popen, PIPE, STDOUT
 from json import dumps
 
 from jinja2 import Environment as _Environment
 from jinja2js import Jinja2JS
-
-# add "jinja2js" directory to sys.path
-sys.path.append(path.dirname(path.dirname(__file__)))
 
 
 class JSTemplateRuntimeError(Exception):
     pass
 
 
-class Template(object):
-
-    NODE_SUFFIX = """
+NODE_SUFFIX = """
 process.stdin.resume();
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', function (data) {
@@ -27,19 +21,19 @@ process.stdin.on('data', function (data) {
     process.exit();
 });"""
 
-    def __new__(cls, source=None, name='<template>', code=None):
-        if source:
-            return Environment().from_string(source)
-        return super(object, cls).__new__(name, code)
 
-    def __init__(self, name, code):
+class Template(object):
+
+    def __init__(self, source=None, name='<template>', code=None):
+        if source:
+            code = Environment().compile_js(source=source)
         self.name = name
-        self.file = mkstemp()
+        self.file = NamedTemporaryFile(suffix='.js')
         self.file.write(code)
         self.file.write(NODE_SUFFIX)
-        self.file.close()
+        self.file.flush()
 
-    def render(self, ctx):
+    def render(self, **ctx):
         p = Popen(['node', self.file.name, self.name],
                   stdout=PIPE, stdin=PIPE, stderr=PIPE)
         stdout, stderr = p.communicate(dumps(ctx))
@@ -50,8 +44,9 @@ process.stdin.on('data', function (data) {
 
 class Environment(_Environment):
 
-    def __init__(self):
-        super(_Environment, self).__init__(extentions=[Jinja2JS])
+    def __init__(self, *args, **kwargs):
+        super(Environment, self).__init__(*args, **kwargs)
+        self.add_extension(Jinja2JS)
 
     def from_string(self, source):
         return Template(code=self.compile_js(source=source))

@@ -8,7 +8,7 @@ from jinja2 import Markup, escape
 from jinja2.exceptions import SecurityError, TemplateSyntaxError, \
      TemplateRuntimeError
 
- from jinja2js.testsuite import Environment
+from jinja2js.testsuite import Environment
 
 
 class PrivateStuff(object):

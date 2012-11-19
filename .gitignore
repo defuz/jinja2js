@@ -1,3 +1,5 @@
+jinja2/*
+
 *.py[cod]
 
 *.sublime-project

@@ -4,7 +4,8 @@ from copy import deepcopy
 
 from jinja2 import nodes
 from jinja2.optimizer import optimize
-from jinja2.visitor import NodeVisitor, Frame, EvalContext
+from jinja2.visitor import NodeVisitor
+from jinja2.compiler import Frame as _Frame, EvalContext
 from jinja2.exceptions import TemplateAssertionError
 
 from filters import filters, filter_args
@@ -27,13 +28,13 @@ def _get_template(env, name=None, source=None):
 
 class Functions(object):
 
-    def __init__(self):
-        self.declared = set()
-        self.undeclared = set()
+	def __init__(self):
+		self.declared = set()
+		self.undeclared = set()
 
-    def use(self, name):
-    	if name not in self.declared:
-    		self.undeclared.add(name)
+	def use(self, name):
+		if name not in self.declared:
+			self.undeclared.add(name)
 
 	@property
 	def for_declaration(self):
@@ -58,12 +59,21 @@ class Scope(object):
 		return deepcopy(self)
 
 
-class CodeGenerator(CodeGenerator, NodeVisitor):
+class Frame(_Frame):
+
+	def special_name(self, prefix):
+		idx, n = 0, prefix + '0'
+		while n in self.identifiers.declared:
+			idx, n = idx + 1, prefix + str(idx + 1)
+		return n
+
+
+class CodeGenerator(NodeVisitor):
 
 	def __init__(self, environment, scope=None, stream=None):
 		self.environment = environment
 		self.scope = scope or Scope()
-		self.stream = stream or StringIO()ƒ
+		self.stream = stream or StringIO()
 		self.indentation = 0
 
 	def generate(self, templates=None, source=None):
@@ -90,22 +100,23 @@ class CodeGenerator(CodeGenerator, NodeVisitor):
 			raise TypeError('Can\'t compile non template nodes')
 		self.name = name
 		self.filename = filename
+		self.write('Jinja.templates["%s"] = ' % name)
 		self.visit(ast)
 
 	def generate_filter(self, name):
 		if name not in filters:
 			raise TypeError('Can\'t find javascript realization of filter %s' % name)
-		self.write('Jinja.filters.%s = %s' % name, filters[name])
+		self.write('Jinja.filters.%s = %s' % (name, filters[name]))
 
 	def generate_test(self, name):
 		if name not in tests:
 			raise TypeError('Can\'t find javascript realization of test %s' % name)
-		self.write('Jinja.tests.%s = %s' % name, tests[name])
+		self.write('Jinja.tests.%s = %s' % (name, tests[name]))
 
 	def generate_utils(self, name):
 		if name not in utils:
 			raise TypeError('Can\'t find javascript realization of %s' % name)
-		self.write('Jinja.utils.%s = %s' % name, utils[name])
+		self.write('Jinja.utils.%s = %s' % (name, utils[name]))
 
 	## shortcuts ##
 
@@ -188,7 +199,7 @@ class CodeGenerator(CodeGenerator, NodeVisitor):
 		frame.buffer = '_buf'
 		frame.toplevel = True
 
-		self.begin('"%s": {' % self.name)
+		self.begin('{')
 
 		self.write('"macros": ')
 		macros = list(node.find_all(nodes.Macro))
@@ -388,7 +399,7 @@ class CodeGenerator(CodeGenerator, NodeVisitor):
 	def visit_For(self, node, frame):
 
 		before = frame.identifiers.declared.copy()
-		loopvar = nextvar(frame, '_loopvar')
+		loopvar = frame.special_name('_loopvar')
 		if loopvar.endswith('0') and 'loop' in frame.identifiers.declared:
 			self.line('var _pre_loop = loop;')
 
@@ -455,7 +466,7 @@ class CodeGenerator(CodeGenerator, NodeVisitor):
 			self.write(')')
 			return
 
-		spec = dict((k, i) for (i, k) in enumerate(FILTER_ARGS[node.name]))
+		spec = dict((k, i) for (i, k) in enumerate(filter_args[node.name]))
 		args = [None] * (len(spec))
 		for i, arg in enumerate(node.args):
 			args[i] = arg
@@ -517,7 +528,9 @@ class CodeGenerator(CodeGenerator, NodeVisitor):
 	def visit_Compare(self, node, frame):
 
 		if node.ops[0].op not in ('in', 'notin'):
-			CodeGenerator.visit_Compare(self, node, frame)
+			self.visit(node.expr, frame)
+			for op in node.ops:
+				self.visit(op, frame)
 			return
 
 		oper = node.ops[0]
