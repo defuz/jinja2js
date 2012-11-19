@@ -75,11 +75,11 @@ filters = {
 	}""",
 
 	"count": """function(val) {
-		return this.length(val);
+		return Jinja.filters.length(val);
 	}""",
 
 	"d": """function(val, alt, bool) {
-		return this.default(val, alt, bool);
+		return Jinja.filters.default(val, alt, bool);
 	}""",
 
 	"default": """function(val, alt, bool) {
@@ -92,7 +92,7 @@ filters = {
 	}""",
 
 	"dictsort": """function(val) {
-		var keys = this.list(val);
+		var keys = Jinja.filters.list(val);
 		keys.sort();
 		var ls = [];
 		for (var i = 0; i < keys.length; i++) {
@@ -102,7 +102,7 @@ filters = {
 	}""",
 
 	"e": """function(s) {
-		return this.escape(s);
+		return Jinja.filters.escape(s);
 	}""",
 
 	"escape": """function(s) {
@@ -115,7 +115,7 @@ filters = {
 	}""",
 
 	"forceescape": """function(s) {
-		return this.escape(s);
+		return Jinja.filters.escape(s);
 	}""",
 
 	"filesizeformat": """function(val, binary) {
@@ -125,13 +125,13 @@ filters = {
 		var middle = binary ? 'i' : '';
 		if (bytes < base) {
 			var multi = bytes == 1 ? '' : 's';
-			return this.format("%i Byte%s", bytes, multi);
+			return Jinja.filters.format("%i Byte%s", bytes, multi);
 		} else if (bytes < base * base) {
-			return this.format("%.1f K%sB", bytes / base, middle);
+			return Jinja.filters.format("%.1f K%sB", bytes / base, middle);
 		} else if (bytes < base * base * base) {
-			return this.format("%.1f M%sB", bytes / (base * base), middle);
+			return Jinja.filters.format("%.1f M%sB", bytes / (base * base), middle);
 		}
-		return this.format("%.1f G%sB", bytes / (base * base * base), middle);
+		return Jinja.filters.format("%.1f G%sB", bytes / (base * base * base), middle);
 	}""",
 
 	"first": """function(val) {
@@ -326,7 +326,7 @@ filters = {
 	}""",
 
 	"title": """function(s) {
-		return s.replace(/[a-zA-Z]+/g, this.capitalize);
+		return s.replace(/[a-zA-Z]+/g, Jinja.filters.capitalize);
 	}""",
 
 	"trim": """function(s) {
@@ -367,7 +367,7 @@ filters = {
 		var tmp = [];
 		for (var k in d) {
 			if (d[k] === null || d[k] === undefined) continue;
-			tmp.push(this.format('%s="%s"', this.escape(k), this.escape(d[k])));
+			tmp.push(Jinja.filters.format('%s="%s"', Jinja.filters.escape(k), Jinja.filters.escape(d[k])));
 		}
 		var res = (space ? ' ' : '') + tmp.join(' ');
 		return res;
@@ -395,7 +395,7 @@ filters = {
 # 	"first": "typeof(%(val)s) == 'string' ? %(val)s.charAt(0) : %(val)s[0]",
 # 	"last": "typeof(%(val)s) == 'string' ? %(val)s.charAt(%(val)s.length - 1) : %(val)s[%(val)s.length - 1]",
 
-# 	"title": "s.replace(/[a-zA-Z]+/g, this.capitalize)",
+# 	"title": "s.replace(/[a-zA-Z]+/g, Jinja.filters.capitalize)",
 # 	"trim": "%s.replace(/^\s+|\s+$/g, '')",
 # 	"wordcount": "%s.split(/\s+/g).length",
 # 	"replace": "%s.replace(%s, %s, 'g')",
@@ -458,7 +458,7 @@ filters = {
 # 	}""",
 
 # 	"dictsort": """function(val) {
-# 		var keys = this.list(val);
+# 		var keys = Jinja.filters.list(val);
 # 		keys.sort();
 # 		var ls = [];
 # 		for (var i = 0; i < keys.length; i++) {
@@ -474,13 +474,13 @@ filters = {
 # 		var middle = binary ? 'i' : '';
 # 		if (bytes < base) {
 # 			var multi = bytes == 1 ? '' : 's';
-# 			return this.format("%i Byte%s", bytes, multi);
+# 			return Jinja.filters.format("%i Byte%s", bytes, multi);
 # 		} else if (bytes < base * base) {
-# 			return this.format("%.1f K%sB", bytes / base, middle);
+# 			return Jinja.filters.format("%.1f K%sB", bytes / base, middle);
 # 		} else if (bytes < base * base * base) {
-# 			return this.format("%.1f M%sB", bytes / (base * base), middle);
+# 			return Jinja.filters.format("%.1f M%sB", bytes / (base * base), middle);
 # 		}
-# 		return this.format("%.1f G%sB", bytes / (base * base * base), middle);
+# 		return Jinja.filters.format("%.1f G%sB", bytes / (base * base * base), middle);
 # 	}""",
 
 # 	"format": """function(fmt) {
@@ -636,7 +636,7 @@ filters = {
 # 		var tmp = [];
 # 		for (var k in d) {
 # 			if (d[k] === null || d[k] === undefined) continue;
-# 			tmp.push(this.format('%s="%s"', this.escape(k), this.escape(d[k])));
+# 			tmp.push(Jinja.filters.format('%s="%s"', Jinja.filters.escape(k), Jinja.filters.escape(d[k])));
 # 		}
 # 		var res = (space ? ' ' : '') + tmp.join(' ');
 # 		return res;

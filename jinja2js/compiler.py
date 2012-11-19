@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from StringIO import StringIO
 from copy import deepcopy
+from json import dumps
 
 from jinja2 import nodes
 from jinja2.optimizer import optimize
@@ -11,8 +12,6 @@ from jinja2.exceptions import TemplateAssertionError
 from filters import filters, filter_args
 from tests import tests
 from utils import utils
-
-# todo: remove JS prefix
 
 
 def _get_template(env, name=None, source=None):
@@ -75,6 +74,7 @@ class CodeGenerator(NodeVisitor):
 		self.scope = scope or Scope()
 		self.stream = stream or StringIO()
 		self.indentation = 0
+		self.new_line = True
 
 	def generate(self, templates=None, source=None):
 		self.line('var Jinja = Jinja || {templates:{}, filters:{}, tests:{}, utils:{}};')
@@ -100,23 +100,22 @@ class CodeGenerator(NodeVisitor):
 			raise TypeError('Can\'t compile non template nodes')
 		self.name = name
 		self.filename = filename
-		self.write('Jinja.templates["%s"] = ' % name)
 		self.visit(ast)
 
 	def generate_filter(self, name):
 		if name not in filters:
 			raise TypeError('Can\'t find javascript realization of filter %s' % name)
-		self.write('Jinja.filters.%s = %s' % (name, filters[name]))
+		self.line('Jinja.filters.%s = (%s);' % (name, filters[name]))
 
 	def generate_test(self, name):
 		if name not in tests:
 			raise TypeError('Can\'t find javascript realization of test %s' % name)
-		self.write('Jinja.tests.%s = %s' % (name, tests[name]))
+		self.line('Jinja.tests.%s = (%s);' % (name, tests[name]))
 
 	def generate_utils(self, name):
 		if name not in utils:
 			raise TypeError('Can\'t find javascript realization of %s' % name)
-		self.write('Jinja.utils.%s = %s' % (name, utils[name]))
+		self.line('Jinja.utils.%s = (%s);' % (name, utils[name]))
 
 	## shortcuts ##
 
@@ -127,11 +126,14 @@ class CodeGenerator(NodeVisitor):
 		self.indentation -= step
 
 	def write(self, x):
-		self.stream.write('    ' * self.indentation)
 		self.stream.write(x)
+		self.new_line = False
 
 	def line(self, x):
-		self.write(x + '\n')
+		if not self.new_line:
+			self.write('\n')
+		self.write('    ' * self.indentation + x + '\n')
+		self.new_line = True
 
 	def begin(self, x):
 		self.line(x)
@@ -199,8 +201,7 @@ class CodeGenerator(NodeVisitor):
 		frame.buffer = '_buf'
 		frame.toplevel = True
 
-		self.begin('{')
-
+		self.begin('Jinja.templates["%s"] = {' % self.name)
 		self.write('"macros": ')
 		macros = list(node.find_all(nodes.Macro))
 		if not macros:
@@ -242,7 +243,7 @@ class CodeGenerator(NodeVisitor):
 			self.line('return %s.join("");' % frame.buffer)
 
 		self.end('}')
-		self.end('}')
+		self.end('};')
 
 	def visit_Const(self, node, frame):
 		val = node.value
@@ -255,7 +256,7 @@ class CodeGenerator(NodeVisitor):
 		elif val is None:
 			self.write('null')
 		else:
-			self.write(repr(val))
+			self.write(dumps(val))
 
 	def visit_Tuple(self, node, frame):
 		self.visit_List(node, frame)
@@ -335,9 +336,7 @@ class CodeGenerator(NodeVisitor):
 
 	def visit_TemplateData(self, node, frame):
 		val = node.as_const(frame.eval_ctx)
-		if isinstance(val, unicode):
-			val = val.encode('utf-8')
-		self.write(repr(val))
+		self.write(dumps(val))
 
 	def visit_CondExpr(self, node, frame):
 		self.write('(')
@@ -427,6 +426,8 @@ class CodeGenerator(NodeVisitor):
 		self.scope.utils.use('loop')
 		self.write('var %s = Jinja.utils.loop(' % loopvar)
 		if not node.test:
+			print '?????????????????'
+			print node.iter
 			self.visit(node.iter, frame)
 		else:
 			self.write('g%s' % loopvar)
