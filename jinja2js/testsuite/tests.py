@@ -13,19 +13,19 @@ class TestsTestCase(JinjaTestCase):
 
     def test_defined(self):
         tmpl = env.from_string('{{ missing is defined }}|{{ true is defined }}')
-        assert tmpl.render() == 'False|True'
+        assert tmpl.render() == 'false|true'
 
     def test_even(self):
         tmpl = env.from_string('''{{ 1 is even }}|{{ 2 is even }}''')
-        assert tmpl.render() == 'False|True'
+        assert tmpl.render() == 'false|true'
 
     def test_odd(self):
         tmpl = env.from_string('''{{ 1 is odd }}|{{ 2 is odd }}''')
-        assert tmpl.render() == 'True|False'
+        assert tmpl.render() == 'true|false'
 
     def test_lower(self):
         tmpl = env.from_string('''{{ "foo" is lower }}|{{ "FOO" is lower }}''')
-        assert tmpl.render() == 'True|False'
+        assert tmpl.render() == 'true|false'
 
     def test_typechecks(self):
         tmpl = env.from_string('''
@@ -45,12 +45,13 @@ class TestsTestCase(JinjaTestCase):
             {{ mydict is mapping }}
             {{ [] is mapping }}
         ''')
+
         class MyDict(dict):
             pass
         assert tmpl.render(mydict=MyDict()).split() == [
-            'False', 'True', 'False', 'True', 'True', 'False',
-            'True', 'True', 'True', 'True', 'False', 'True',
-            'True', 'True', 'False'
+            'false', 'true', 'false', 'true', 'true', 'false',
+            'true', 'true', 'true', 'true', 'false', 'true',
+            'true', 'true', 'false'
         ]
 
     def test_sequence(self):
@@ -59,25 +60,25 @@ class TestsTestCase(JinjaTestCase):
             '{{ "foo" is sequence }}|'
             '{{ 42 is sequence }}'
         )
-        assert tmpl.render() == 'True|True|False'
+        assert tmpl.render() == 'true|true|false'
 
     def test_upper(self):
         tmpl = env.from_string('{{ "FOO" is upper }}|{{ "foo" is upper }}')
-        assert tmpl.render() == 'True|False'
+        assert tmpl.render() == 'true|false'
 
     def test_sameas(self):
         tmpl = env.from_string('{{ foo is sameas false }}|'
                                '{{ 0 is sameas false }}')
-        assert tmpl.render(foo=False) == 'True|False'
+        assert tmpl.render(foo=False) == 'true|false'
 
     def test_no_paren_for_arg1(self):
         tmpl = env.from_string('{{ foo is sameas none }}')
-        assert tmpl.render(foo=None) == 'True'
+        assert tmpl.render(foo=None) == 'true'
 
     def test_escaped(self):
-        env = Environment(autoescape=True)
+        env = Environment(autoescape='false')
         tmpl = env.from_string('{{ x is escaped }}|{{ y is escaped }}')
-        assert tmpl.render(x='foo', y=Markup('foo')) == 'False|True'
+        assert tmpl.render(x='foo', y=Markup('foo')) == 'false|true'
 
 
 def suite():

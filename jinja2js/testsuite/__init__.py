@@ -33,7 +33,8 @@ class Template(object):
         self.file.write(NODE_SUFFIX)
         self.file.flush()
 
-    def render(self, **ctx):
+    def render(self, ctx=None, **ctx2):
+        ctx = ctx or ctx2
         p = Popen(['node', self.file.name, self.name],
                   stdout=PIPE, stdin=PIPE, stderr=PIPE)
         stdout, stderr = p.communicate(dumps(ctx))

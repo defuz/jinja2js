@@ -38,8 +38,8 @@ class ForLoopTestCase(JinjaTestCase):
         assert int(one_index0) == 0 and int(two_index0) == 1
         assert int(one_revindex) == 2 and int(two_revindex) == 1
         assert int(one_revindex0) == 1 and int(two_revindex0) == 0
-        assert one_first == 'True' and two_first == 'False'
-        assert one_last == 'False' and two_last == 'True'
+        assert one_first == 'true' and two_first == 'false'
+        assert one_last == 'false' and two_last == 'true'
         assert one_length == two_length == '2'
 
     def test_cycling(self):

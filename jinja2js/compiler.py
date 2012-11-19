@@ -246,20 +246,7 @@ class CodeGenerator(NodeVisitor):
 		self.end('};')
 
 	def visit_Const(self, node, frame):
-		val = node.value
-		if isinstance(val, float):
-			self.write(str(val))
-		elif val is False:
-			self.write('false')
-		elif val is True:
-			self.write('true')
-		elif val is None:
-			self.write('null')
-		else:
-			self.write(dumps(val))
-
-	def visit_Tuple(self, node, frame):
-		self.visit_List(node, frame)
+		self.write(dumps(node.value))
 
 	def visit_Block(self, node, frame):
 		bits = frame.buffer, node.name
@@ -281,8 +268,8 @@ class CodeGenerator(NodeVisitor):
 		for n in node.body:
 			self.visit(n, local)
 
-		bits = frame.buffer, node.filter.name, local.buffer
 		self.scope.filters.use(node.filter.name)
+		bits = frame.buffer, node.filter.name, local.buffer
 		self.line('%s.push(Jinja.filters.%s(%s.join("")));' % bits)
 
 	def visit_Assign(self, node, frame):
@@ -326,7 +313,7 @@ class CodeGenerator(NodeVisitor):
 		for n in node.nodes:
 			self.write('%s.push(' % frame.buffer)
 			self.visit(n, frame)
-			self.write(');')
+			self.line(');')
 
 	def visit_Name(self, node, frame):
 		if node.name in frame.identifiers.declared:
@@ -426,8 +413,6 @@ class CodeGenerator(NodeVisitor):
 		self.scope.utils.use('loop')
 		self.write('var %s = Jinja.utils.loop(' % loopvar)
 		if not node.test:
-			print '?????????????????'
-			print node.iter
 			self.visit(node.iter, frame)
 		else:
 			self.write('g%s' % loopvar)
@@ -543,6 +528,26 @@ class CodeGenerator(NodeVisitor):
 		self.write(', ')
 		self.visit(oper.expr, frame)
 		self.write(')')
+
+	def visit_List(self, node, frame):
+		self.write('[')
+		for idx, item in enumerate(node.items):
+			if idx:
+				self.write(', ')
+			self.visit(item, frame)
+		self.write(']')
+
+	visit_Tuple = visit_List
+
+	def visit_Dict(self, node, frame):
+		self.write('{')
+		for idx, item in enumerate(node.items):
+			if idx:
+				self.write(', ')
+			self.visit(item.key, frame)
+			self.write(': ')
+			self.visit(item.value, frame)
+		self.write('}')
 
 	def binop(op):
 		def visitor(self, node, frame):
