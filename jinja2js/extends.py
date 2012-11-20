@@ -58,7 +58,9 @@ class Function(object):
 			getattr(codegen.scope, attr).use(depend)
 		# visits
 		codegen.write('Jinja.filters.' + node.name + '(')
+		codegen.write('(')
 		codegen.visit(node.node, frame)
+		codegen.write(')')
 		for arg in self.signature(node.name, node.args, node.kwargs):
 			codegen.write(', ')
 			if arg is None:
@@ -66,7 +68,9 @@ class Function(object):
 			elif isinstance(arg, basestring):
 				codegen.write(arg)
 			else:
+				codegen.write('(')
 				codegen.visit(arg, frame)
+				codegen.write(')')
 		codegen.write(')')
 
 
@@ -117,7 +121,9 @@ class Inline(object):
 				codegen.write(token)
 				continue
 			if token == 'value':
+				codegen.write('(')
 				codegen.visit(node.node, frame)
+				codegen.write(')')
 				continue
 			arg = signature[token]
 			if arg is None:
@@ -125,7 +131,9 @@ class Inline(object):
 			elif isinstance(arg, basestring):
 				codegen.write(arg)
 			else:
+				codegen.write('(')
 				codegen.visit(arg, frame)
+				codegen.write(')')
 		codegen.write(')')
 
 function, inline = Function, Inline

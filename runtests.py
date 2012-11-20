@@ -8,4 +8,4 @@ sys.path.append(path.dirname(path.abspath(__file__)))
 from jinja2js.testsuite import suite
 
 if __name__ == '__main__':
-	unittest.TextTestRunner(descriptions=False, verbosity=3).run(suite())
+	unittest.TextTestRunner(verbosity=2).run(suite())

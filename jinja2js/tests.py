@@ -7,7 +7,7 @@ default_tests = {
 	"number": inline("typeof({{value}}) == 'number'"),
 	"string": inline("typeof({{value}}) == 'string'"),
 
-	"odd": inline("{{value}} % 2"),
+	"odd": inline("!!({{value}} % 2)"),
 	"even": inline("!({{value}} % 2)"),
 	"divisibleby": inline("!({{value}} % {{num}})", spec=('num',)),
 

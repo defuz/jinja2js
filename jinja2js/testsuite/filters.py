@@ -24,7 +24,7 @@ class FilterTestCase(JinjaTestCase):
             "{{ missing|default('no') }}|{{ false|default('no') }}|"
             "{{ false|default('no', true) }}|{{ given|default('no') }}"
         )
-        assert tmpl.render(given='yes') == 'no|False|no|yes'
+        assert tmpl.render(given='yes') == 'no|false|no|yes'
 
     def test_dictsort(self):
         tmpl = env.from_string(
@@ -109,7 +109,7 @@ class FilterTestCase(JinjaTestCase):
                                '{{ "ajsghasjgd"|float }}|'
                                '{{ "32.32"|float }}')
         out = tmpl.render()
-        assert out == '42.0|0.0|32.32'
+        assert out == '42|0|32.32'
 
     def test_format(self):
         tmpl = env.from_string('''{{ "%s|%s"|format("a", "b") }}''')

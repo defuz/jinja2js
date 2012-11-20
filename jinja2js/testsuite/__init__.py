@@ -8,6 +8,9 @@ from jinja2 import Environment as _Environment
 from jinja2js import Jinja2JS
 
 
+# todo: test others test suite
+
+
 class JSTemplateRuntimeError(Exception):
     pass
 

@@ -10,29 +10,38 @@ default_filters = {
 
 	"abs": inline("Math.abs({{value}})"),
 	"int": inline("Math.floor({{value}}) || {{default}}", spec="default", defaults={'default': 0}),
-	"float": inline("parseFloat({{value}}) || {{default}}", spec="default", defaults={'default': 0}),
-
-	"random": inline("{{value}}[Math.floor(Math.random() * {{value}}.length)]"),
+	"float": inline("parseFloat({{value}}) || {{default}}", spec="default", defaults={'default': 0.0}),
 
 	"string": inline("{{value}}.toString()"),
 
 	"lower": inline("{{value}}.toLowerCase()"),
 	"upper": inline("{{value}}.toUpperCase()"),
-	"capitalize": inline("{{value}}.charAt(0).toUpperCase() + {{value}}.substring(1).toLowerCase()"),
-
-	"first": inline("typeof({{value}} == 'string' ? {{value}}.charAt(0) : {{value}}[0]"),
-	"last": inline("typeof({{value}}) == 'string' ? {{value}}.charAt({{value}}.length - 1) : {{value}}[{{value}}.length - 1]"),
 
 	"trim": inline("{{value}}.replace(/^\s+|\s+$/g, '')"),
 	"wordcount": inline("{{value}}.split(/\s+/g).length"),
 	"replace": inline("{{value}}.replace({{old}}, {{new}}, 'g')", spec=('old', 'new')),
-
 
 	"title": function("""function(value) {
       	return value.replace(/[a-zA-Z]+/g, function(v) {
              return v.charAt(0).toUpperCase() + v.substring(1).toLowerCase();
         });
   	}"""),
+
+	"capitalize": function("""function(value) {
+        return value.charAt(0).toUpperCase() + value.substring(1).toLowerCase();
+    }"""),
+
+	"first": function("""function(value) {
+        return typeof(value) == 'string' ? value.charAt(0) : value[0];
+    }"""),
+
+	"last": function("""function(value) {
+        return typeof(value) == 'string' ? value.charAt(value.length - 1) : value[value.length - 1];
+    }"""),
+
+	"random": function("""function(value) {
+        return value[Math.floor(Math.random() * value.length)];
+    }"""),
 
 	"escape": function("""function(s) {
 		return (s.replace('&', '&amp;')
@@ -59,7 +68,7 @@ default_filters = {
 		}
 		if (tmp.length) res.push(tmp);
 		return res;
-	}""", spec=('linecount', 'fill_with'), defaults={'fill_with': None}),
+	}""", spec=('linecount', 'fill_with')),
 
 	"center": function("""function(s, width) {
 		var pre = Math.floor((width - s.length) / 2);
@@ -230,7 +239,7 @@ default_filters = {
 			else start += ls[i][attrib];
 		}
 		return start;
-	}""", spec=('attribute', 'start'), defaults={'attribute': None, 'start': 0}),
+	}""", spec=('attribute', 'start'), defaults={'start': 0}),
 
 	"truncate": function("""function(s, len, kill, end) {
 		if (s.length < len) return s;

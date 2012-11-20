@@ -324,9 +324,9 @@ class CodeGenerator(NodeVisitor):
 
 	def visit_Output(self, node, frame):
 		for n in node.nodes:
-			self.write('%s.push(' % frame.buffer)
+			self.line('%s.push(' % frame.buffer)
 			self.visit(n, frame)
-			self.line(');')
+			self.write(');')
 
 	def visit_Name(self, node, frame):
 		if node.name in frame.identifiers.declared:
@@ -410,7 +410,7 @@ class CodeGenerator(NodeVisitor):
 		frame.identifiers.declared.add('loop')
 		if node.test:
 			self.scope.utils.use('loop')
-			self.write('var f%s = Jinja.utils.loop(' % loopvar)
+			self.line('var f%s = Jinja.utils.loop(' % loopvar)
 			self.visit(node.iter, frame)
 			self.write(');')
 
@@ -424,11 +424,11 @@ class CodeGenerator(NodeVisitor):
 			self.write(') continue;')
 
 			bits = (loopvar,) * 3
-			self.write('g%s.push(f%s.iter[f%s.i]);' % bits)
+			self.line('g%s.push(f%s.iter[f%s.i]);' % bits)
 			self.end('}')
 
 		self.scope.utils.use('loop')
-		self.write('var %s = Jinja.utils.loop(' % loopvar)
+		self.line('var %s = Jinja.utils.loop(' % loopvar)
 		if not node.test:
 			self.visit(node.iter, frame)
 		else:

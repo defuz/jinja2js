@@ -115,15 +115,15 @@ class ForLoopTestCase(JinjaTestCase):
     def test_scoped_special_var(self):
         t = env.from_string('{% for s in seq %}[{{ loop.first }}{% for c in s %}'
                             '|{{ loop.first }}{% endfor %}]{% endfor %}')
-        assert t.render(seq=('ab', 'cd')) == '[True|True|False][False|True|False]'
+        assert t.render(seq=('ab', 'cd')) == '[true|true|false][false|true|false]'
 
     def test_scoped_loop_var(self):
         t = env.from_string('{% for x in seq %}{{ loop.first }}'
                             '{% for y in seq %}{% endfor %}{% endfor %}')
-        assert t.render(seq='ab') == 'TrueFalse'
+        assert t.render(seq='ab') == 'truefalse'
         t = env.from_string('{% for x in seq %}{% for y in seq %}'
                             '{{ loop.first }}{% endfor %}{% endfor %}')
-        assert t.render(seq='ab') == 'TrueFalseTrueFalse'
+        assert t.render(seq='ab') == 'truefalsetruefalse'
 
     def test_recursive_empty_loop_iter(self):
         t = env.from_string('''
@@ -236,7 +236,7 @@ class MacrosTestCase(JinjaTestCase):
 {% set caller = 42 %}\
 {% macro test() %}{{ caller is not defined }}{% endmacro %}\
 {{ test() }}''')
-        assert tmpl.render() == 'True'
+        assert tmpl.render() == 'true'
 
     def test_include(self):
         self.env = Environment(loader=DictLoader({'include':
