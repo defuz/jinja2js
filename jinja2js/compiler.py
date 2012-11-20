@@ -25,7 +25,7 @@ def _get_template(env, name=None, source=None):
 	return name, filename, ast
 
 
-class Functions(object):
+class Dependencies(object):
 
 	def __init__(self):
 		self.declared = set()
@@ -36,7 +36,7 @@ class Functions(object):
 			self.undeclared.add(name)
 
 	@property
-	def for_declaration(self):
+	def declaration(self):
 		while self.undeclared:
 			x = self.undeclared.pop()
 			self.declared.add(x)
@@ -49,10 +49,10 @@ class Functions(object):
 class Scope(object):
 
 	def __init__(self):
-		self.templates = Functions()
-		self.filters = Functions()
-		self.tests = Functions()
-		self.utils = Functions()
+		self.templates = Dependencies()
+		self.filters = Dependencies()
+		self.tests = Dependencies()
+		self.utils = Dependencies()
 
 	def copy(self):
 		return deepcopy(self)
@@ -65,6 +65,16 @@ class Frame(_Frame):
 		while n in self.identifiers.declared:
 			idx, n = idx + 1, prefix + str(idx + 1)
 		return n
+
+
+operators = {'eq': '==',
+             'ne': '!=',
+             'gt': '>',
+             'gteq': '>=',
+             'lt': '<',
+             'lteq': '<=',
+             'in': 'in',  # todo: really?
+             'notin': 'not in'}  # todo: really?
 
 
 class CodeGenerator(NodeVisitor):
@@ -84,13 +94,13 @@ class CodeGenerator(NodeVisitor):
 		if templates:
 			for name in templates:
 				self.generate_template(name=name)
-		for name in self.scope.templates.for_declaration:
+		for name in self.scope.templates.declaration:
 			self.generate_template(name=name)
-		for name in self.scope.filters.for_declaration:
+		for name in self.scope.filters.declaration:
 			self.generate_filter(name)
-		for name in self.scope.tests.for_declaration:
+		for name in self.scope.tests.declaration:
 			self.generate_test(name)
-		for name in self.scope.utils.for_declaration:
+		for name in self.scope.utils.declaration:
 			self.generate_utils(name)
 		self.end('}(Jinja));')
 
@@ -103,19 +113,22 @@ class CodeGenerator(NodeVisitor):
 		self.visit(ast)
 
 	def generate_filter(self, name):
-		if name not in filters:
+		if name not in self.environment.filters_js:
 			raise TypeError('Can\'t find javascript realization of filter %s' % name)
-		self.line('Jinja.filters.%s = (%s);' % (name, filters[name]))
+		body = self.environment.filters_js[name].body
+		self.line('Jinja.filters.%s = (%s);' % (name, body))
 
 	def generate_test(self, name):
-		if name not in tests:
+		if name not in self.environment.tests_js:
 			raise TypeError('Can\'t find javascript realization of test %s' % name)
-		self.line('Jinja.tests.%s = (%s);' % (name, tests[name]))
+		body = self.environment.tests_js[name].body
+		self.line('Jinja.tests.%s = (%s);' % (name, body))
 
 	def generate_utils(self, name):
 		if name not in utils:
 			raise TypeError('Can\'t find javascript realization of %s' % name)
-		self.line('Jinja.utils.%s = (%s);' % (name, utils[name]))
+		body = self.environment.utils_js[name].body
+		self.line('Jinja.utils.%s = (%s);' % (name, body))
 
 	## shortcuts ##
 
@@ -309,6 +322,10 @@ class CodeGenerator(NodeVisitor):
 			first = False
 		self.write(')')
 
+	def visit_CallBlock(self, node, frame):
+		self.visit_Call(node.call, frame)
+		self.write(';')
+
 	def visit_Output(self, node, frame):
 		for n in node.nodes:
 			self.write('%s.push(' % frame.buffer)
@@ -366,6 +383,10 @@ class CodeGenerator(NodeVisitor):
 			self.write('[')
 			self.visit(node.arg, frame)
 			self.write(']')
+
+	def visit_Operand(self, node, frame):
+		self.write(' %s ' % operators[node.op])
+		self.visit(node.expr, frame)
 
 	def for_targets(self, node, loopvar, frame, pre=''):
 
@@ -441,16 +462,16 @@ class CodeGenerator(NodeVisitor):
 		self.write('Jinja.filters.' + node.name + '(')
 		self.visit(node.node, frame)
 
-		if not node.args and not node.kwargs:
-			self.write(')')
-			return
+		# if not node.args and not node.kwargs:
+			# self.write(')')
+			# return
 
-		if node.args and not node.kwargs:
-			for n in node.args:
-				self.write(', ')
-				self.visit(n, frame)
-			self.write(')')
-			return
+		# if node.args and not node.kwargs:
+			# for n in node.args:
+				# self.write(', ')
+				# self.visit(n, frame)
+			# self.write(')')
+			# return
 
 		spec = dict((k, i) for (i, k) in enumerate(filter_args[node.name]))
 		args = [None] * (len(spec))
@@ -558,5 +579,18 @@ class CodeGenerator(NodeVisitor):
 			self.write(')')
 		return visitor
 
+	def generic_visit(self, node, *args, **kwargs):
+		print '??????????????????????'
+		print node
+		NodeVisitor.generic_visit(self, node, *args, **kwargs)
+
+	visit_Add = binop('+')
+	visit_Sub = binop('-')
+	visit_Mul = binop('*')
+	visit_Div = binop('/')
+	# todo: uaop, floordiv, pow
+	#visit_FloorDiv = binop('//')
+	#visit_Pow = binop('**')
+	visit_Mod = binop('%')
 	visit_And = binop('&&')
 	visit_Or = binop('||')

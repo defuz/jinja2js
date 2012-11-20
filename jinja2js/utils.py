@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
+from extends import functions
 
-utils = {
-	"extend": """function(base, child) {
+# todo: add global functions
+# http://jinja.pocoo.org/docs/templates/#list-of-global-functions
+
+default_utils = {
+	"extend": function("""function(base, child) {
 		if (child == undefined) return base;
 		var current = {"blocks": {}};
 		for (var key in base.blocks) {
@@ -12,17 +16,17 @@ utils = {
 			}
 		}
 		return current;
-	}""",
+	}"""),
 
-	"slice": """function(val, start, stop) {
+	"slice": function("""function(val, start, stop) {
 		if (typeof(val) == "string") {
 			return val.substring(start, stop);
 		} else if (val instanceof Array) {
 			return val.slice(start, stop);
 		}
-	}""",
+	}"""),
 
-	"loop": """function(iter) {
+	"loop": function("""function(iter) {
 		function LoopObject() {
 			this.iter = iter;
 			this.l = iter.length;
@@ -41,9 +45,9 @@ utils = {
 			};
 		}
 		return new LoopObject();
-	}""",
+	}"""),
 
-	"contains": """function(n, hs) {
+	"contains": function("""function(n, hs) {
 		if (hs instanceof Array) {
 			for (var i = 0; i < hs.length; i++) {
 				if (hs[i] == n) return true;
@@ -56,21 +60,21 @@ utils = {
 		} else {
 			throw new TypeError("containment is undefined: " + n + " in " + JSON.stringify(hs));
 		}
-	}""",
+	}"""),
 
-	"strjoin": """function() {
+	"strjoin": function("""function() {
 		var buf = [];
 		for (var i = 0; i < arguments.length; i++) {
 			buf.push(arguments[i].toString());
 		}
 		return buf.join("");
-	}""",
+	}"""),
 
-	"strmul": """function(s, n) {
+	"strmul": function("""function(s, n) {
 		var buf = [];
 		for (var i = 0; i < n; i++) {
 			buf.push(s);
 		}
 		return buf.join('');
-	}"""
+	}""")
 }
