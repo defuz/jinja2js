@@ -6,11 +6,11 @@ default_filters = {
 	"safe": inline("{{value}}"),
 	"attr": inline("{{value}}[{{name}}]", spec='name'),
 	"length": inline("{{value}}.length"),
-	"join": inline("{{value}}.join({{d}})", spec='d'),
+	"join": inline("{{value}}.join({{d}})", spec='d', defaults={'d': ''}),
 
 	"abs": inline("Math.abs({{value}})"),
-	"int": inline("Math.floor({{value}}) || {{default}}", spec="default", default={'default': 0}),
-	"float": inline("parseFloat({{value}}) || {{default}}", spec="default", default={'default': 0}),
+	"int": inline("Math.floor({{value}}) || {{default}}", spec="default", defaults={'default': 0}),
+	"float": inline("parseFloat({{value}}) || {{default}}", spec="default", defaults={'default': 0}),
 
 	"random": inline("{{value}}[Math.floor(Math.random() * {{value}}.length)]"),
 
@@ -59,7 +59,7 @@ default_filters = {
 		}
 		if (tmp.length) res.push(tmp);
 		return res;
-	}""", spec=('linecount', 'fill_with'), default={'fill_with': None}),
+	}""", spec=('linecount', 'fill_with'), defaults={'fill_with': None}),
 
 	"center": function("""function(s, width) {
 		var pre = Math.floor((width - s.length) / 2);
@@ -73,7 +73,7 @@ default_filters = {
 			buf.push(' ');
 		}
 		return buf.join('');
-	}""", spec='width', default={'width': 80}),
+	}""", spec='width', defaults={'width': 80}),
 
 	"default": function("""function(val, alt, bool) {
 		if (!bool) {
@@ -81,7 +81,7 @@ default_filters = {
 		} else {
 			return val ? val : alt;
 		}
-	}""", spec=('default_value', 'boolean'), default={'default_value': '', 'boolean': False}),
+	}""", spec=('default_value', 'boolean'), defaults={'default_value': '', 'boolean': False}),
 
 	"dictsort": function("""function(val) {
 		var keys = Jinja.filters.list(val);
@@ -106,7 +106,7 @@ default_filters = {
 			return Jinja.filters.format("%.1f M%sB", bytes / (base * base), middle);
 		}
 		return Jinja.filters.format("%.1f G%sB", bytes / (base * base * base), middle);
-	}""", spec='binary', default={'binary': False}, depends='filter.format'),
+	}""", spec='binary', defaults={'binary': False}, depends='filter.format'),
 
 	"format": function("""function(fmt) {
 		var vals = Array.prototype.slice.call(arguments, 1);
@@ -125,18 +125,18 @@ default_filters = {
 					val = val.toString();
 				}
 				if (val.length < wantlen) {
-					val = Jasinja.utils.strmul(ext, wantlen - val.length) + val;
+					val = Jinja.utils.strmul(ext, wantlen - val.length) + val;
 				}
 				fmt = fmt.replace(parts[0], val);
 			} else if (type == "i") {
 				val = parseInt(val).toString();
 				if (val.length < wantlen) {
-					val = Jasinja.utils.strmul(ext, wantlen - val.length) + val;
+					val = Jinja.utils.strmul(ext, wantlen - val.length) + val;
 				}
 				fmt = fmt.replace(parts[0], val);
 			} else if (type == "s") {
 				if (val.length < wantlen) {
-					val = Jasinja.utils.strmul(ext, wantlen - val.length) + val;
+					val = Jinja.utils.strmul(ext, wantlen - val.length) + val;
 				}
 				fmt = fmt.replace(parts[0], val.toString());
 			} else if (type == "%") {
@@ -161,11 +161,11 @@ default_filters = {
 	}""", spec='attribute'),
 
 	"indent": function("""function(s, w, first) {
-		var indent = Jasinja.utils.strmul(' ', w);
-		var res = s.split('\n').join('\n' + indent);
+		var indent = Jinja.utils.strmul(' ', w);
+		var res = s.split('\\n').join('\\n' + indent);
 		if (first) res = indent + res;
 		return res;
-	}""", spec=('width', 'indentfirst'), default={'width': 4, 'indentfirst': False}, depends='utils.strmul'),
+	}""", spec=('width', 'indentfirst'), defaults={'width': 4, 'indentfirst': False}, depends='utils.strmul'),
 
 	"list": function("""function(val) {
 		if (val instanceof Array) {
@@ -230,7 +230,7 @@ default_filters = {
 			else start += ls[i][attrib];
 		}
 		return start;
-	}""", spec=('attribute', 'start'), default={'attribute': None, 'start': 0}),
+	}""", spec=('attribute', 'start'), defaults={'attribute': None, 'start': 0}),
 
 	"truncate": function("""function(s, len, kill, end) {
 		if (s.length < len) return s;
@@ -247,7 +247,7 @@ default_filters = {
 		result.push(end);
 		return result.join(' ');
 
-	}""", spec=('length', 'killwords', 'end'), default={'length': 255, 'killwords': False, 'end': '...'}),
+	}""", spec=('length', 'killwords', 'end'), defaults={'length': 255, 'killwords': False, 'end': '...'}),
 
 	"xmlattr": function("""function(d, space) {
 		var tmp = [];
@@ -257,7 +257,7 @@ default_filters = {
 		}
 		var res = (space ? ' ' : '') + tmp.join(' ');
 		return res;
-	}""", spec='autospace', default={'autospace': True}, depends='filters.escape')
+	}""", spec='autospace', defaults={'autospace': True}, depends='filters.escape')
 }
 
 # synonyms

@@ -15,7 +15,7 @@ class Jinja2JS(Extension):
 		self.bind(env)
 
 	def bind(self, env):
-		def compile2js(templates=None, source=None,
+		def compile_js(templates=None, source=None,
 		               scope=None, stream=None,
 		               extensions=None, filter_func=None):
 			if templates is None and source is None:

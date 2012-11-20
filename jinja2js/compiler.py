@@ -9,10 +9,6 @@ from jinja2.visitor import NodeVisitor
 from jinja2.compiler import Frame as _Frame, EvalContext
 from jinja2.exceptions import TemplateAssertionError
 
-from filters import filters, filter_args
-from tests import tests
-from utils import utils
-
 
 def _get_template(env, name=None, source=None):
 	if name:
@@ -95,7 +91,7 @@ class CodeGenerator(NodeVisitor):
 			for name in templates:
 				self.generate_template(name=name)
 		for name in self.scope.templates.declaration:
-			self.generate_template(name=name)
+			self.generate_template(name=name.value)  # todo: fix this
 		for name in self.scope.filters.declaration:
 			self.generate_filter(name)
 		for name in self.scope.tests.declaration:
@@ -125,7 +121,7 @@ class CodeGenerator(NodeVisitor):
 		self.line('Jinja.tests.%s = (%s);' % (name, body))
 
 	def generate_utils(self, name):
-		if name not in utils:
+		if name not in self.environment.utils_js:
 			raise TypeError('Can\'t find javascript realization of %s' % name)
 		body = self.environment.utils_js[name].body
 		self.line('Jinja.utils.%s = (%s);' % (name, body))
@@ -192,7 +188,7 @@ class CodeGenerator(NodeVisitor):
 
 	def block(self, node, frame):
 
-		self.begin('"%s": function(ctx) {' % node.name)
+		self.begin('"%s": function(ctx, tmpl) {' % node.name)
 		self.line('var %s = [];' % frame.buffer)
 
 		frame = Frame(frame.eval_ctx, frame)
@@ -263,7 +259,7 @@ class CodeGenerator(NodeVisitor):
 
 	def visit_Block(self, node, frame):
 		bits = frame.buffer, node.name
-		self.line('%s.push(tmpl.blocks["%s"](ctx));' % bits)
+		self.line('%s.push(tmpl.blocks["%s"](ctx, tmpl));' % bits)
 
 	def visit_Extends(self, node, frame):
 		pass
@@ -271,7 +267,7 @@ class CodeGenerator(NodeVisitor):
 	def visit_Macro(self, node, frame):
 		pass
 
-	def visit_FilterBlock(self, node, frame):
+	def visit_FilterBlock(self, node, frame):  # todo: wtf?
 
 		local = Frame(EvalContext(self.environment, self.name))
 		local.buffer = '_fbuf'
@@ -458,43 +454,14 @@ class CodeGenerator(NodeVisitor):
 			self.line('loop = _pre_loop;')
 
 	def visit_Filter(self, node, frame):
-		self.scope.filters.use(node.name)
-		self.write('Jinja.filters.' + node.name + '(')
-		self.visit(node.node, frame)
-
-		# if not node.args and not node.kwargs:
-			# self.write(')')
-			# return
-
-		# if node.args and not node.kwargs:
-			# for n in node.args:
-				# self.write(', ')
-				# self.visit(n, frame)
-			# self.write(')')
-			# return
-
-		spec = dict((k, i) for (i, k) in enumerate(filter_args[node.name]))
-		args = [None] * (len(spec))
-		for i, arg in enumerate(node.args):
-			args[i] = arg
-		for arg in node.kwargs:
-			args[spec[arg.key]] = arg.value
-		while args and args[-1] is None:
-			args.pop()
-
-		for n in args:
-			self.write(', ')
-			if n is None:
-				self.write('undefined')
-			else:
-				self.visit(n, frame)
-		self.write(')')
+		if node.name not in self.environment.filters_js:
+			raise TypeError('Can\'t find javascript realization of filter %s' % node.name)
+		self.environment.filters_js[node.name].visit(self, node, frame)
 
 	def visit_Test(self, node, frame):
-		self.scope.tests.use(node.name)
-		self.write('Jinja.tests.' + node.name + '(')
-		self.visit(node.node, frame)
-		self.write(')')
+		if node.name not in self.environment.tests_js:
+			raise TypeError('Can\'t find javascript realization of test %s' % node.name)
+		self.environment.tests_js[node.name].visit(self, node, frame)
 
 	def visit_Not(self, node, frame):
 		self.write('!')
@@ -574,15 +541,15 @@ class CodeGenerator(NodeVisitor):
 		def visitor(self, node, frame):
 			self.write('(')
 			self.visit(node.left, frame)
-			self.write(' %s ', op)
+			self.write(' %s ' % op)
 			self.visit(node.right, frame)
 			self.write(')')
 		return visitor
 
-	def generic_visit(self, node, *args, **kwargs):
-		print '??????????????????????'
-		print node
-		NodeVisitor.generic_visit(self, node, *args, **kwargs)
+	# def generic_visit(self, node, *args, **kwargs):
+		# print '??????????????????????'
+		# print node
+		# NodeVisitor.generic_visit(self, node, *args, **kwargs)
 
 	visit_Add = binop('+')
 	visit_Sub = binop('-')

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from extends import functions
+from extends import function
 
 # todo: add global functions
 # http://jinja.pocoo.org/docs/templates/#list-of-global-functions
