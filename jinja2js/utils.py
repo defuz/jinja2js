@@ -3,8 +3,19 @@ from extends import function
 
 # todo: add global functions
 # http://jinja.pocoo.org/docs/templates/#list-of-global-functions
+# using "None" in templates
 
 default_utils = {
+	"markup": function("""(function() {
+        var Markup = function(html) {
+        	this.html = html;
+        }
+        Markup.prototype.toString = function() {
+        	return this.html;
+        }
+        return Markup;
+   	})()""", include='utils'),
+
 	"extend": function("""function(base, child) {
 		if (child == undefined) return base;
 		var current = {"blocks": {}};
@@ -16,7 +27,7 @@ default_utils = {
 			}
 		}
 		return current;
-	}"""),
+	}""", include='utils'),
 
 	"slice": function("""function(val, start, stop) {
 		if (typeof(val) == "string") {
@@ -24,7 +35,7 @@ default_utils = {
 		} else if (val instanceof Array) {
 			return val.slice(start, stop);
 		}
-	}"""),
+	}""", include='utils'),
 
 	"loop": function("""function(iter) {
 		function LoopObject() {
@@ -45,7 +56,7 @@ default_utils = {
 			};
 		}
 		return new LoopObject();
-	}"""),
+	}""", include='utils'),
 
 	"contains": function("""function(n, hs) {
 		if (hs instanceof Array) {
@@ -60,7 +71,7 @@ default_utils = {
 		} else {
 			throw new TypeError("containment is undefined: " + n + " in " + JSON.stringify(hs));
 		}
-	}"""),
+	}""", include='utils'),
 
 	"strjoin": function("""function() {
 		var buf = [];
@@ -68,7 +79,7 @@ default_utils = {
 			buf.push(arguments[i].toString());
 		}
 		return buf.join("");
-	}"""),
+	}""", include='utils'),
 
 	"strmul": function("""function(s, n) {
 		var buf = [];
@@ -76,5 +87,5 @@ default_utils = {
 			buf.push(s);
 		}
 		return buf.join('');
-	}""")
+	}""", include='utils')
 }

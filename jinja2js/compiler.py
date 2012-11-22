@@ -50,6 +50,16 @@ class Scope(object):
 		self.tests = Dependencies()
 		self.utils = Dependencies()
 
+	def use(self, depend):
+		include, depend = depend.split('.')
+		getattr(self, include).use(depend)
+
+	def has_undeclared(self):
+		return (self.templates.undeclared or
+		        self.filters.undeclared or
+		        self.tests.undeclared or
+		        self.utils.undeclared)
+
 	def copy(self):
 		return deepcopy(self)
 
@@ -111,20 +121,23 @@ class CodeGenerator(NodeVisitor):
 	def generate_filter(self, name):
 		if name not in self.environment.filters_js:
 			raise TypeError('Can\'t find javascript realization of filter %s' % name)
-		body = self.environment.filters_js[name].body
-		self.line('Jinja.filters.%s = (%s);' % (name, body))
+		filter = self.environment.filters_js[name]
+		filter.register_depends(self.scope)
+		self.line('Jinja.filters.%s = %s;' % (name, filter.body))
 
 	def generate_test(self, name):
 		if name not in self.environment.tests_js:
 			raise TypeError('Can\'t find javascript realization of test %s' % name)
-		body = self.environment.tests_js[name].body
-		self.line('Jinja.tests.%s = (%s);' % (name, body))
+		test = self.environment.tests_js[name]
+		test.register_depends(self.scope)
+		self.line('Jinja.tests.%s = %s;' % (name, test.body))
 
 	def generate_utils(self, name):
 		if name not in self.environment.utils_js:
 			raise TypeError('Can\'t find javascript realization of %s' % name)
-		body = self.environment.utils_js[name].body
-		self.line('Jinja.utils.%s = (%s);' % (name, body))
+		util = self.environment.utils_js[name]
+		util.register_depends(self.scope)
+		self.line('Jinja.utils.%s = %s;' % (name, util.body))
 
 	## shortcuts ##
 
@@ -135,13 +148,13 @@ class CodeGenerator(NodeVisitor):
 		self.indentation -= step
 
 	def write(self, x):
+		if self.new_line:
+			self.stream.write('    ' * self.indentation)
 		self.stream.write(x)
 		self.new_line = False
 
 	def line(self, x):
-		if not self.new_line:
-			self.write('\n')
-		self.write('    ' * self.indentation + x + '\n')
+		self.write(x + '\n')
 		self.new_line = True
 
 	def begin(self, x):
@@ -202,7 +215,7 @@ class CodeGenerator(NodeVisitor):
 		self.scope.templates.use(node.template)
 		self.write('%s.push(Jinja.templates[' % frame.buffer)
 		self.visit(node.template, frame)
-		self.write('].render(ctx));')
+		self.line('].render(ctx));')
 
 	def visit_Template(self, node, frame=None):
 
@@ -320,13 +333,20 @@ class CodeGenerator(NodeVisitor):
 
 	def visit_CallBlock(self, node, frame):
 		self.visit_Call(node.call, frame)
-		self.write(';')
+		self.line(';')
 
 	def visit_Output(self, node, frame):
-		for n in node.nodes:
-			self.line('%s.push(' % frame.buffer)
-			self.visit(n, frame)
-			self.write(');')
+		for child in node.nodes:
+			self.write('%s.push(' % frame.buffer)
+			if frame.eval_ctx.autoescape:
+				self.scope.utils.use('markup')  # todo: remove this
+				self.scope.filters.use('escape')
+				self.write('Jinja.filters.escape(')
+				self.visit(child, frame)
+				self.write(')')
+			else:
+				self.visit(child, frame)
+			self.line(');')
 
 	def visit_Name(self, node, frame):
 		if node.name in frame.identifiers.declared:
@@ -464,8 +484,9 @@ class CodeGenerator(NodeVisitor):
 		self.environment.tests_js[node.name].visit(self, node, frame)
 
 	def visit_Not(self, node, frame):
-		self.write('!')
+		self.write('!(')
 		self.visit(node.node, frame)
+		self.write(')')
 
 	def visit_Concat(self, node, frame):
 		self.scope.utils.use('strjoin')

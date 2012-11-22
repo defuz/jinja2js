@@ -2,11 +2,15 @@
 from extends import function, inline
 
 
+# todo: check `.toString()` in all filters/test
+# todo: check `is string` in all filters/test result
+# todo: default arguments: null -> undefined
+
+
 default_filters = {
 	"safe": inline("{{value}}"),
 	"attr": inline("{{value}}[{{name}}]", spec='name'),
 	"length": inline("{{value}}.length"),
-	"join": inline("{{value}}.join({{d}})", spec='d', defaults={'d': ''}),
 
 	"abs": inline("Math.abs({{value}})"),
 	"int": inline("Math.floor({{value}}) || {{default}}", spec="default", defaults={'default': 0}),
@@ -19,7 +23,44 @@ default_filters = {
 
 	"trim": inline("{{value}}.replace(/^\s+|\s+$/g, '')"),
 	"wordcount": inline("{{value}}.split(/\s+/g).length"),
-	"replace": inline("{{value}}.replace({{old}}, {{new}}, 'g')", spec=('old', 'new')),
+	"replace": inline("{{value}}.split({{old}}).join({{new}})", spec=('old', 'new')),
+
+	"urlencode": function("""function(value) {
+        if (value instanceof Array) {
+        	var r = [];
+        	for (var i in value) {
+        		r.push(encodeURIComponent(value[i][0]) + "=" + encodeURIComponent(value[i][1]));
+        	}
+        	return r.join('&amp;');
+        }
+        if (typeof value == "object") {
+        	var r = [];
+        	for (var i in value) {
+        		r.push(encodeURIComponent(i) + "=" + encodeURIComponent(value[i]));
+        	}
+        	return r.join('&amp;');
+        }
+        return encodeURIComponent(value);
+    }"""),
+
+	"json": inline('JSON.stringify({{value}})'),
+
+	"join": function("""function(arr, del, attr) {
+        if (!(arr instanceof Array)) {
+        	if (attr) {
+        		return arr[attr];
+        	}
+        	return arr;
+        }
+        if (attr) {
+            r = [];
+            for (var i in arr) {
+            	r.push(arr[i][attr])
+            }
+            return r.join(del);
+        }
+        return arr.join(del);
+    }""", spec=('d', 'attribute'), defaults={'d': '', 'attribute': None}),
 
 	"title": function("""function(value) {
       	return value.replace(/[a-zA-Z]+/g, function(v) {
@@ -44,12 +85,22 @@ default_filters = {
     }"""),
 
 	"escape": function("""function(s) {
-		return (s.replace('&', '&amp;')
-		         .replace('<', '&lt;')
-		         .replace('>', '&gt;')
-		         .replace('"', '&#34;')
-		         .replace("'", '&#39;'));
+        if (s instanceof Jinja.utils.markup)
+        	return s;
+		return s.toString().replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&#34;').replace("'", '&#39;');
+	}""", depends=('utils.markup',)),
+
+	"forceescape": function("""function(s) {
+		return s.toString().replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&#34;').replace("'", '&#39;');
 	}"""),
+
+	"striptags": function("""function(s) {
+        return s.toString().replace(/(<!--.*?-->|<[^>]*>)/g, ' ').replace(/\\s+/g, ' ').trim();
+    }"""),
+
+    "urlize": function("""function(s) {
+        return s.toString().replace(/(\\b(https?|ftp|file):\\/\\/[-A-Z0-9+&@#\\/%?=~_|!:,.;]*[-A-Z0-9+&@#\\/%=~_|])/ig, '<a href="$1">$1</a>');
+    }"""),
 
 	"batch": function("""function(ls, num, fill) {
 		var res = [];
@@ -92,15 +143,21 @@ default_filters = {
 		}
 	}""", spec=('default_value', 'boolean'), defaults={'default_value': '', 'boolean': False}),
 
-	"dictsort": function("""function(val) {
-		var keys = Jinja.filters.list(val);
-		keys.sort();
-		var ls = [];
-		for (var i = 0; i < keys.length; i++) {
-			ls.push([keys[i], val[keys[i]]]);
+	"dictsort": function("""function(val, case_sensitive, by) {
+        var items = [], ls = [], i, key;
+        for (i in val) {
+        	key = (by == 'key' ? i : val[i]).toString();
+        	if (!case_sensitive) {
+        		key = key.toLowerCase();
+        	}
+    		items.push([key, i, val[i]]);
+        }
+		items.sort();
+		for (i = 0; i < items.length; i++) {
+			ls.push([items[i][1], items[i][2]]);
 		}
 		return ls;
-	}""", depends='filters.list'),
+	}""", spec=('case_sensitive', 'by'), defaults={'case_sensitive': False, 'by': 'key'}),
 
 	"filesizeformat": function("""function(val, binary) {
 		var bytes = parseFloat(val);
@@ -115,7 +172,7 @@ default_filters = {
 			return Jinja.filters.format("%.1f M%sB", bytes / (base * base), middle);
 		}
 		return Jinja.filters.format("%.1f G%sB", bytes / (base * base * base), middle);
-	}""", spec='binary', defaults={'binary': False}, depends='filter.format'),
+	}""", spec='binary', defaults={'binary': False}, depends='filters.format'),
 
 	"format": function("""function(fmt) {
 		var vals = Array.prototype.slice.call(arguments, 1);
@@ -227,16 +284,52 @@ default_filters = {
 		return res;
 	}""", spec=('slices', 'fill_with')),
 
-	"sort": function("""function(val) {
-		var c = val.slice(0);
-		c.sort();
-		return c;
-	}"""),
+	"sort": function("""function(arr, reverse, caseSens, attr) {
+        arr.sort(function(a, b) {
+            var x, y;
+
+            if(attr) {
+                x = a[attr];
+                y = b[attr];
+            }
+            else {
+                x = a;
+                y = b;
+            }
+
+            if(!caseSens && typeof(x) == 'string' && typeof(y) == 'string') {
+                x = x.toLowerCase();
+                y = y.toLowerCase();
+            }
+
+            if(x < y) {
+                return reverse ? 1 : -1;
+            }
+            else if(x > y) {
+                return reverse ? -1: 1;
+            }
+            else {
+                return 0;
+            }
+        });
+
+        return arr;
+    }""", spec=('reverse', 'case_sensitive', 'attribute'), defaults={'reverse': False, 'case_sensitive': False, 'attribute': None}),
 
 	"sum": function("""function(ls, attrib, start) {
+        if (attrib !== undefined) {
+        	attrib = attrib.split('.')
+        }
 		for (var i = 0; i < ls.length; i++) {
-			if (attrib === undefined) start += ls[i];
-			else start += ls[i][attrib];
+			if (attrib === undefined) {
+				start += ls[i];
+			} else {
+				var x = ls[i];
+				for (var j in attrib) {
+					x = x[attrib[j]];
+				}
+				start += x;
+			}
 		}
 		return start;
 	}""", spec=('attribute', 'start'), defaults={'start': 0}),
@@ -266,11 +359,13 @@ default_filters = {
 		}
 		var res = (space ? ' ' : '') + tmp.join(' ');
 		return res;
-	}""", spec='autospace', defaults={'autospace': True}, depends='filters.escape')
+	}""", spec='autospace', defaults={'autospace': True}, depends=('filters.escape', 'filters.format'))
 }
 
 # synonyms
 default_filters['count'] = default_filters['length']
 default_filters['e'] = default_filters['escape']
-default_filters['forceescape'] = default_filters['escape']
 default_filters['d'] = default_filters['default']
+
+# i do not want to imitate `pprint`. so this is an acceptable alternative
+default_filters['pprint'] = default_filters['json']

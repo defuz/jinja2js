@@ -59,27 +59,27 @@ class InheritanceTestCase(JinjaTestCase):
 
     def test_layout(self):
         tmpl = env.get_template('layout')
-        assert tmpl.render() == ('|block 1 from layout|block 2 from '
+        tmpl.assert_render() == ('|block 1 from layout|block 2 from '
                                  'layout|nested block 4 from layout|')
 
     def test_level1(self):
         tmpl = env.get_template('level1')
-        assert tmpl.render() == ('|block 1 from level1|block 2 from '
+        tmpl.assert_render() == ('|block 1 from level1|block 2 from '
                                  'layout|nested block 4 from layout|')
 
     def test_level2(self):
         tmpl = env.get_template('level2')
-        assert tmpl.render() == ('|block 1 from level1|nested block 5 from '
+        tmpl.assert_render() == ('|block 1 from level1|nested block 5 from '
                                  'level2|nested block 4 from layout|')
 
     def test_level3(self):
         tmpl = env.get_template('level3')
-        assert tmpl.render() == ('|block 1 from level1|block 5 from level3|'
+        tmpl.assert_render() == ('|block 1 from level1|block 5 from level3|'
                                  'block 4 from level3|')
 
     def test_level4(sel):
         tmpl = env.get_template('level4')
-        assert tmpl.render() == ('|block 1 from level1|block 5 from '
+        tmpl.assert_render() == ('|block 1 from level1|block 5 from '
                                  'level3|block 3 from level4|')
 
     def test_super(self):
@@ -93,7 +93,7 @@ class InheritanceTestCase(JinjaTestCase):
                  '%}[{{ super() }}]{% endblock %}'
         }))
         tmpl = env.get_template('c')
-        assert tmpl.render() == '--INTRO--|BEFORE|[(INNER)]|AFTER'
+        tmpl.assert_render() == '--INTRO--|BEFORE|[(INNER)]|AFTER'
 
     def test_working(self):
         tmpl = env.get_template('working')
@@ -101,7 +101,7 @@ class InheritanceTestCase(JinjaTestCase):
     def test_reuse_blocks(self):
         tmpl = env.from_string('{{ self.foo() }}|{% block foo %}42'
                                '{% endblock %}|{{ self.foo() }}')
-        assert tmpl.render() == '42|42|42'
+        tmpl.assert_render() == '42|42|42'
 
     def test_preserve_blocks(self):
         env = Environment(loader=DictLoader({
@@ -109,7 +109,7 @@ class InheritanceTestCase(JinjaTestCase):
             'b': '{% extends "a" %}{% block x %}B{{ super() }}{% endblock %}'
         }))
         tmpl = env.get_template('b')
-        assert tmpl.render() == 'BA'
+        tmpl.assert_render() == 'BA'
 
     def test_dynamic_inheritance(self):
         env = Environment(loader=DictLoader({
@@ -119,7 +119,7 @@ class InheritanceTestCase(JinjaTestCase):
         }))
         tmpl = env.get_template('child')
         for m in range(1, 3):
-            assert tmpl.render(master='master%d' % m) == 'MASTER%dCHILD' % m
+            tmpl.assert_render(master='master%d' % m) == 'MASTER%dCHILD' % m
 
     def test_multi_inheritance(self):
         env = Environment(loader=DictLoader({
@@ -129,9 +129,9 @@ class InheritanceTestCase(JinjaTestCase):
                         'master1' %}{% endif %}{% block x %}CHILD{% endblock %}'''
         }))
         tmpl = env.get_template('child')
-        assert tmpl.render(master='master2') == 'MASTER2CHILD'
-        assert tmpl.render(master='master1') == 'MASTER1CHILD'
-        assert tmpl.render() == 'MASTER1CHILD'
+        tmpl.assert_render(master='master2') == 'MASTER2CHILD'
+        tmpl.assert_render(master='master1') == 'MASTER1CHILD'
+        tmpl.assert_render() == 'MASTER1CHILD'
 
     def test_scoped_block(self):
         env = Environment(loader=DictLoader({
@@ -140,7 +140,7 @@ class InheritanceTestCase(JinjaTestCase):
         }))
         t = env.from_string('{% extends "master.html" %}{% block item %}'
                             '{{ item }}{% endblock %}')
-        assert t.render(seq=range(5)) == '[0][1][2][3][4]'
+        t.assert_render(seq=range(5)) == '[0][1][2][3][4]'
 
     def test_super_in_scoped_block(self):
         env = Environment(loader=DictLoader({
@@ -149,7 +149,7 @@ class InheritanceTestCase(JinjaTestCase):
         }))
         t = env.from_string('{% extends "master.html" %}{% block item %}'
                             '{{ super() }}|{{ item * 2 }}{% endblock %}')
-        assert t.render(seq=range(5)) == '[0|0][1|2][2|4][3|6][4|8]'
+        t.assert_render(seq=range(5)) == '[0|0][1|2][2|4][3|6][4|8]'
 
     def test_scoped_block_after_inheritance(self):
         env = Environment(loader=DictLoader({
@@ -171,7 +171,7 @@ class InheritanceTestCase(JinjaTestCase):
             {% macro foo(x) %}{{ the_foo + x }}{% endmacro %}
             '''
         }))
-        rv = env.get_template('index.html').render(the_foo=42).split()
+        rv = env.get_template('index.html').assert_render(the_foo=42).split()
         assert rv == ['43', '44', '45']
 
 
@@ -209,7 +209,7 @@ class BugFixTestCase(JinjaTestCase):
             'standard.html': '''
         {% block content %}&nbsp;{% endblock %}
         '''
-        })).get_template("test.html").render().split() == [u'outer_box', u'my_macro']
+        })).get_template("test.html").assert_render().split() == [u'outer_box', u'my_macro']
 
 
 def suite():

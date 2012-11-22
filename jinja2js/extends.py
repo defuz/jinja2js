@@ -7,12 +7,13 @@ __all__ = ['function', 'inline']
 
 class Function(object):
 
-	def __init__(self, body, depends=None, free=False, spec=None, defaults=None):
+	def __init__(self, body, depends=None, free=False, spec=None, defaults=None, include='filters'):
 		self.body = '(%s)' % body
 		depends = depends or ()
 		if not isinstance(depends, (tuple, list)):
 			depends = (depends,)
-		self.depends = [depend.split('.') for depend in depends]
+		self.depends = depends
+		self.include = include
 		self.free = free
 		if not free:
 			self.spec = spec or ()
@@ -51,13 +52,15 @@ class Function(object):
 			signature.pop()
 		return signature
 
+	def register_depends(self, scope):
+		for depend in self.depends:
+			scope.use(depend)
+
 	def visit(self, codegen, node, frame):
-		# register dependenies
-		codegen.scope.filters.use(node.name)
-		for attr, depend in self.depends:
-			getattr(codegen.scope, attr).use(depend)
+		# register self in dependenies
+		getattr(codegen.scope, self.include).use(node.name)
 		# visits
-		codegen.write('Jinja.filters.' + node.name + '(')
+		codegen.write('Jinja.%s.%s(' % (self.include, node.name))
 		codegen.write('(')
 		codegen.visit(node.node, frame)
 		codegen.write(')')
@@ -81,7 +84,7 @@ class Inline(object):
 		depends = depends or ()
 		if not isinstance(depends, (tuple, list)):
 			depends = (depends,)
-		self.depends = [depend.split('.') for depend in depends]
+		self.depends = depends
 		self.spec = spec or ()
 		if not isinstance(self.spec, (tuple, list)):
 			self.spec = (self.spec,)
@@ -107,10 +110,11 @@ class Inline(object):
 				signature[name] = value
 		return signature
 
+	def register_depends(self, scope):
+		for depend in self.depends:
+			scope.use(depend)
+
 	def visit(self, codegen, node, frame):
-		# register dependenies
-		for attr, depend in self.depends:
-			getattr(codegen.scope, attr).use(depend)
 		# visits
 		codegen.write('(')
 		is_output = False

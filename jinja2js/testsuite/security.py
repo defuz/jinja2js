@@ -38,13 +38,13 @@ class SandboxTestCase(JinjaTestCase):
         env = SandboxedEnvironment()
         self.assert_raises(SecurityError, env.from_string("{{ foo.foo() }}").render,
                            foo=PrivateStuff())
-        self.assert_equal(env.from_string("{{ foo.bar() }}").render(foo=PrivateStuff()), '23')
+        self.assert_equal(env.from_string("{{ foo.bar() }}").assert_render(foo=PrivateStuff()), '23')
 
         self.assert_raises(SecurityError, env.from_string("{{ foo._foo() }}").render,
                            foo=PublicStuff())
-        self.assert_equal(env.from_string("{{ foo.bar() }}").render(foo=PublicStuff()), '23')
-        self.assert_equal(env.from_string("{{ foo.__class__ }}").render(foo=42), '')
-        self.assert_equal(env.from_string("{{ foo.func_code }}").render(foo=lambda:None), '')
+        self.assert_equal(env.from_string("{{ foo.bar() }}").assert_render(foo=PublicStuff()), '23')
+        self.assert_equal(env.from_string("{{ foo.__class__ }}").assert_render(foo=42), '')
+        self.assert_equal(env.from_string("{{ foo.func_code }}").assert_render(foo=lambda:None), '')
         # security error comes from __class__ already.
         self.assert_raises(SecurityError, env.from_string(
             "{{ foo.__class__.__subclasses__() }}").render, foo=42)
@@ -104,7 +104,7 @@ class SandboxTestCase(JinjaTestCase):
                             '<p>Hello {{ name }}!</p>{% endmacro %}'
                             '{{ say_hello("<blink>foo</blink>") }}')
         escaped_out = '<p>Hello &lt;blink&gt;foo&lt;/blink&gt;!</p>'
-        assert t.render() == escaped_out
+        t.assert_render() == escaped_out
         assert unicode(t.module) == escaped_out
         assert escape(t.module) == escaped_out
         assert t.module.say_hello('<blink>foo</blink>') == escaped_out
@@ -122,11 +122,11 @@ class SandboxTestCase(JinjaTestCase):
             env = SandboxedEnvironment()
             env.binop_table['+'] = disable_op
             t = env.from_string('{{ %s }}' % expr)
-            assert t.render(ctx) == rv
+            t.assert_render(ctx) == rv
             env.intercepted_binops = frozenset(['+'])
             t = env.from_string('{{ %s }}' % expr)
             try:
-                t.render(ctx)
+                t.assert_render(ctx)
             except TemplateRuntimeError, e:
                 pass
             else:
@@ -139,11 +139,11 @@ class SandboxTestCase(JinjaTestCase):
             env = SandboxedEnvironment()
             env.unop_table['-'] = disable_op
             t = env.from_string('{{ %s }}' % expr)
-            assert t.render(ctx) == rv
+            t.assert_render(ctx) == rv
             env.intercepted_unops = frozenset(['-'])
             t = env.from_string('{{ %s }}' % expr)
             try:
-                t.render(ctx)
+                t.assert_render(ctx)
             except TemplateRuntimeError, e:
                 pass
             else:

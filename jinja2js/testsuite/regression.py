@@ -18,7 +18,7 @@ class CornerTestCase(JinjaTestCase):
         {%- endfor %}
         {{- item -}}
         ''')
-        assert t.render(item=42) == '[1][2][3][4]42'
+        t.assert_render(item=42) == '[1][2][3][4]42'
 
         t = env.from_string('''
         {%- for item in (1, 2, 3, 4) -%}
@@ -27,7 +27,7 @@ class CornerTestCase(JinjaTestCase):
         {%- set item = 42 %}
         {{- item -}}
         ''')
-        assert t.render() == '[1][2][3][4]42'
+        t.assert_render() == '[1][2][3][4]42'
 
         t = env.from_string('''
         {%- set item = 42 %}
@@ -36,7 +36,7 @@ class CornerTestCase(JinjaTestCase):
         {%- endfor %}
         {{- item -}}
         ''')
-        assert t.render() == '[1][2][3][4]42'
+        t.assert_render() == '[1][2][3][4]42'
 
     def test_closure_scoping(self):
         t = env.from_string('''
@@ -47,7 +47,7 @@ class CornerTestCase(JinjaTestCase):
         {%- endfor %}
         {{- wrapper -}}
         ''')
-        assert t.render() == '[1][2][3][4]<FOO>'
+        t.assert_render() == '[1][2][3][4]<FOO>'
 
         t = env.from_string('''
         {%- for item in (1, 2, 3, 4) %}
@@ -57,7 +57,7 @@ class CornerTestCase(JinjaTestCase):
         {%- set wrapper = "<FOO>" %}
         {{- wrapper -}}
         ''')
-        assert t.render() == '[1][2][3][4]<FOO>'
+        t.assert_render() == '[1][2][3][4]<FOO>'
 
         t = env.from_string('''
         {%- for item in (1, 2, 3, 4) %}
@@ -66,7 +66,7 @@ class CornerTestCase(JinjaTestCase):
         {%- endfor %}
         {{- wrapper -}}
         ''')
-        assert t.render(wrapper=23) == '[1][2][3][4]23'
+        t.assert_render(wrapper=23) == '[1][2][3][4]23'
 
 
 class BugTestCase(JinjaTestCase):
@@ -75,7 +75,7 @@ class BugTestCase(JinjaTestCase):
         env = Environment()
         env.filters['testing'] = lambda value, some: value + some
         assert env.from_string("{{ 'test'|testing(some='stuff') }}") \
-               .render() == 'teststuff'
+               .assert_render() == 'teststuff'
 
     def test_extends_output_bugs(self):
         env = Environment(loader=DictLoader({
@@ -85,12 +85,12 @@ class BugTestCase(JinjaTestCase):
         t = env.from_string('{% if expr %}{% extends "parent.html" %}{% endif %}'
                             '[[{% block title %}title{% endblock %}]]'
                             '{% for item in [1, 2, 3] %}({{ item }}){% endfor %}')
-        assert t.render(expr=False) == '[[title]](1)(2)(3)'
-        assert t.render(expr=True) == '((title))'
+        t.assert_render(expr=False) == '[[title]](1)(2)(3)'
+        t.assert_render(expr=True) == '((title))'
 
     def test_urlize_filter_escaping(self):
         tmpl = env.from_string('{{ "http://www.example.org/<foo"|urlize }}')
-        assert tmpl.render() == '<a href="http://www.example.org/&lt;foo">http://www.example.org/&lt;foo</a>'
+        tmpl.assert_render() == '<a href="http://www.example.org/&lt;foo">http://www.example.org/&lt;foo</a>'
 
     def test_loop_call_loop(self):
         tmpl = env.from_string('''
@@ -109,7 +109,7 @@ class BugTestCase(JinjaTestCase):
 
         ''')
 
-        assert tmpl.render().split() == map(unicode, range(1, 11)) * 5
+        tmpl.assert_render().split() == map(unicode, range(1, 11)) * 5
 
     def test_weird_inline_comment(self):
         env = Environment(line_statement_prefix='%')
@@ -119,12 +119,12 @@ class BugTestCase(JinjaTestCase):
     def test_old_macro_loop_scoping_bug(self):
         tmpl = env.from_string('{% for i in (1, 2) %}{{ i }}{% endfor %}'
                                '{% macro i() %}3{% endmacro %}{{ i() }}')
-        assert tmpl.render() == '123'
+        tmpl.assert_render() == '123'
 
     def test_partial_conditional_assignments(self):
         tmpl = env.from_string('{% if b %}{% set a = 42 %}{% endif %}{{ a }}')
-        assert tmpl.render(a=23) == '23'
-        assert tmpl.render(b=True) == '42'
+        tmpl.assert_render(a=23) == '23'
+        tmpl.assert_render(b=True) == '42'
 
     def test_stacked_locals_scoping_bug(self):
         env = Environment(line_statement_prefix='#')
@@ -148,7 +148,7 @@ class BugTestCase(JinjaTestCase):
 #   print 'D'
 # endif
     ''')
-        assert t.render(a=0, b=False, c=42, d=42.0) == '1111C'
+        t.assert_render(a=0, b=False, c=42, d=42.0) == '1111C'
 
     def test_stacked_locals_scoping_bug_twoframe(self):
         t = Template('''
@@ -160,7 +160,7 @@ class BugTestCase(JinjaTestCase):
             {% endfor %}
             {{ x }}
         ''')
-        rv = t.render(foo=[1]).strip()
+        rv = t.assert_render(foo=[1]).strip()
         assert rv == u'1'
 
     def test_call_with_args(self):
@@ -181,7 +181,7 @@ class BugTestCase(JinjaTestCase):
           </dl>
         {% endcall %}""")
 
-        assert [x.strip() for x in t.render(list_of_user=[{
+        assert [x.strip() for x in t.assert_render(list_of_user=[{
             'username':'apo',
             'realname':'something else',
             'description':'test'

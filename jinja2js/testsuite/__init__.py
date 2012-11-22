@@ -9,13 +9,25 @@ from jinja2js import Jinja2JS
 
 
 # todo: test others test suite
+# todo: restore all test suite from origin jinja rep
 
 
 class JSTemplateRuntimeError(Exception):
     pass
 
 
-NODE_SUFFIX = """
+class AssertString(str):
+
+    def __eq__(self, other):
+        equal = str.__eq__(self, other)
+        if equal is False:
+            raise AssertionError("%r != %r" % (self, other))
+        return equal
+
+
+class Template(object):
+
+    NODE_SUFFIX = """
 process.stdin.resume();
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', function (data) {
@@ -24,16 +36,14 @@ process.stdin.on('data', function (data) {
     process.exit();
 });"""
 
-
-class Template(object):
-
     def __init__(self, source=None, name='<template>', code=None):
         if source:
             code = Environment().compile_js(source=source)
         self.name = name
+        self.code = code
         self.file = NamedTemporaryFile(suffix='.js')
         self.file.write(code)
-        self.file.write(NODE_SUFFIX)
+        self.file.write(Template.NODE_SUFFIX)
         self.file.flush()
 
     def render(self, ctx=None, **ctx2):
@@ -44,6 +54,9 @@ class Template(object):
         if stderr:
             raise JSTemplateRuntimeError(stderr)
         return stdout
+
+    def assert_render(self, *args, **kwargs):
+        return AssertString(self.render(*args, **kwargs))
 
 
 class Environment(_Environment):
@@ -65,11 +78,11 @@ def suite():
 
     suite = unittest.TestSuite()
     suite.addTest(filters.suite())
-    suite.addTest(tests.suite())
-    suite.addTest(core_tags.suite())
-    suite.addTest(inheritance.suite())
-    suite.addTest(imports.suite())
-    suite.addTest(security.suite())
-    suite.addTest(regression.suite())
+    # suite.addTest(tests.suite())
+    # suite.addTest(core_tags.suite())
+    # suite.addTest(inheritance.suite())
+    # suite.addTest(imports.suite())
+    # suite.addTest(security.suite())
+    # suite.addTest(regression.suite())
 
     return suite
