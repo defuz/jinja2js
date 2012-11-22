@@ -6,15 +6,6 @@ from extends import function
 # using "None" in templates
 
 default_utils = {
-	"markup": function("""(function() {
-        var Markup = function(html) {
-        	this.html = html;
-        }
-        Markup.prototype.toString = function() {
-        	return this.html;
-        }
-        return Markup;
-   	})()""", include='utils'),
 
 	"extend": function("""function(base, child) {
 		if (child == undefined) return base;

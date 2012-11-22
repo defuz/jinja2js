@@ -102,10 +102,11 @@ class CodeGenerator(NodeVisitor):
 				self.generate_template(name=name)
 		for name in self.scope.templates.declaration:
 			self.generate_template(name=name.value)  # todo: fix this
-		for name in self.scope.filters.declaration:
-			self.generate_filter(name)
+		# fixme: deep dependencies
 		for name in self.scope.tests.declaration:
 			self.generate_test(name)
+		for name in self.scope.filters.declaration:
+			self.generate_filter(name)
 		for name in self.scope.utils.declaration:
 			self.generate_utils(name)
 		self.end('}(Jinja));')
@@ -280,7 +281,7 @@ class CodeGenerator(NodeVisitor):
 	def visit_Macro(self, node, frame):
 		pass
 
-	def visit_FilterBlock(self, node, frame):  # todo: wtf?
+	def visit_FilterBlock(self, node, frame):
 
 		local = Frame(EvalContext(self.environment, self.name))
 		local.buffer = '_fbuf'
@@ -290,9 +291,9 @@ class CodeGenerator(NodeVisitor):
 		for n in node.body:
 			self.visit(n, local)
 
-		self.scope.filters.use(node.filter.name)
-		bits = frame.buffer, node.filter.name, local.buffer
-		self.line('%s.push(Jinja.filters.%s(%s.join("")));' % bits)
+		self.write('%s.push(' % frame.buffer)
+		self.visit_Filter(node.filter, local)
+		self.line(');')
 
 	def visit_Assign(self, node, frame):
 
@@ -338,19 +339,14 @@ class CodeGenerator(NodeVisitor):
 	def visit_Output(self, node, frame):
 		for child in node.nodes:
 			self.write('%s.push(' % frame.buffer)
-			if frame.eval_ctx.autoescape:
-				self.scope.utils.use('markup')  # todo: remove this
-				self.scope.filters.use('escape')
-				self.write('Jinja.filters.escape(')
-				self.visit(child, frame)
-				self.write(')')
-			else:
-				self.visit(child, frame)
+			self.visit(child, frame)
 			self.line(');')
 
 	def visit_Name(self, node, frame):
 		if node.name in frame.identifiers.declared:
 			self.write(node.name)
+		elif node.name.lower() == 'none':
+			self.write('null')
 		else:
 			self.write('ctx.%s' % node.name)
 

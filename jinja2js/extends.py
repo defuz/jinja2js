@@ -57,13 +57,18 @@ class Function(object):
 			scope.use(depend)
 
 	def visit(self, codegen, node, frame):
-		# register self in dependenies
+		# register self in dependencies
 		getattr(codegen.scope, self.include).use(node.name)
 		# visits
 		codegen.write('Jinja.%s.%s(' % (self.include, node.name))
-		codegen.write('(')
-		codegen.visit(node.node, frame)
-		codegen.write(')')
+		# if the filter node is None we are inside a filter block
+		# and want to write to the current buffer
+		if node.node is None:
+			codegen.write('%s.join("")' % frame.buffer)
+		else:
+			codegen.write('(')
+			codegen.visit(node.node, frame)
+			codegen.write(')')
 		for arg in self.signature(node.name, node.args, node.kwargs):
 			codegen.write(', ')
 			if arg is None:
@@ -125,9 +130,14 @@ class Inline(object):
 				codegen.write(token)
 				continue
 			if token == 'value':
-				codegen.write('(')
-				codegen.visit(node.node, frame)
-				codegen.write(')')
+				# if the filter node is None we are inside a filter block
+				# and want to write to the current buffer
+				if node.node is None:
+					codegen.write('%s.join("")' % frame.buffer)
+				else:
+					codegen.write('(')
+					codegen.visit(node.node, frame)
+					codegen.write(')')
 				continue
 			arg = signature[token]
 			if arg is None:

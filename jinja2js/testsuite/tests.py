@@ -72,13 +72,8 @@ class TestsTestCase(JinjaTestCase):
         tmpl.assert_render(foo=False) == 'true|false'
 
     def test_no_paren_for_arg1(self):
-        tmpl = env.from_string('{{ foo is sameas null }}')
+        tmpl = env.from_string('{{ foo is sameas none }}')
         tmpl.assert_render(foo=None) == 'true'
-
-    def test_escaped(self):
-        env = Environment(autoescape='false')
-        tmpl = env.from_string('{{ x is escaped }}|{{ y is escaped }}')
-        tmpl.assert_render(x='foo', y=Markup('foo')) == 'false|true'
 
 
 def suite():

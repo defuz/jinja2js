@@ -126,11 +126,6 @@ class FilterTestCase(JinjaTestCase):
         out = tmpl.assert_render()
         assert out == '1|2|3'
 
-        env2 = Environment(autoescape=True)
-        tmpl = env2.from_string('{{ ["<foo>", "<span>foo</span>"|safe]|join }}')
-        print tmpl.code
-        tmpl.assert_render() == '&lt;foo&gt;<span>foo</span>'
-
     def test_join_attribute(self):
         class User(dict):
             def __init__(self, username):
@@ -344,27 +339,13 @@ class FilterTestCase(JinjaTestCase):
         env = Environment()
         tmpl = env.from_string('{{ string|replace("o", 42) }}')
         tmpl.assert_render(string='<foo>') == '<f4242>'
-        env = Environment(autoescape=True)
-        tmpl = env.from_string('{{ string|replace("o", 42) }}')
-        tmpl.assert_render(string='<foo>') == '&lt;f4242&gt;'
-        tmpl = env.from_string('{{ string|replace("<", 42) }}')
-        tmpl.assert_render(string='<foo>') == '42foo&gt;'
-        tmpl = env.from_string('{{ string|replace("o", ">x<") }}')
-        tmpl.assert_render(string=Markup('foo')) == 'f&gt;x&lt;&gt;x&lt;'
 
     def test_forceescape(self):
         tmpl = env.from_string('{{ x|forceescape }}')
         tmpl.assert_render(x=Markup('<div />')) == u'&lt;div /&gt;'
 
-    def test_safe(self):
-        env = Environment(autoescape=True)
-        tmpl = env.from_string('{{ "<div>foo</div>"|safe }}')
-        tmpl.assert_render() == '<div>foo</div>'
-        tmpl = env.from_string('{{ "<div>foo</div>" }}')
-        tmpl.assert_render() == '&lt;div&gt;foo&lt;/div&gt;'
-
     def test_urlencode(self):
-        env = Environment(autoescape=True)
+        env = Environment()
         tmpl = env.from_string('{{ "Hello, world!"|urlencode }}')
         tmpl.assert_render() == 'Hello%2C%20world%21'
         tmpl = env.from_string('{{ o|urlencode }}')

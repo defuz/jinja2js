@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from extends import function, inline
 
+# todo: light autoescaping: |safe can be use only in the end of output
+
 
 # todo: check `.toString()` in all filters/test
 # todo: check `is string` in all filters/test result
@@ -85,12 +87,6 @@ default_filters = {
     }"""),
 
 	"escape": function("""function(s) {
-        if (s instanceof Jinja.utils.markup)
-        	return s;
-		return s.toString().replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&#34;').replace("'", '&#39;');
-	}""", depends=('utils.markup',)),
-
-	"forceescape": function("""function(s) {
 		return s.toString().replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&#34;').replace("'", '&#39;');
 	}"""),
 
@@ -364,7 +360,7 @@ default_filters = {
 
 # synonyms
 default_filters['count'] = default_filters['length']
-default_filters['e'] = default_filters['escape']
+default_filters['forceescape'] = default_filters['e'] = default_filters['escape']
 default_filters['d'] = default_filters['default']
 
 # i do not want to imitate `pprint`. so this is an acceptable alternative

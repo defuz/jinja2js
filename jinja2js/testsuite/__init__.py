@@ -78,11 +78,11 @@ def suite():
 
     suite = unittest.TestSuite()
     suite.addTest(filters.suite())
-    # suite.addTest(tests.suite())
-    # suite.addTest(core_tags.suite())
-    # suite.addTest(inheritance.suite())
-    # suite.addTest(imports.suite())
-    # suite.addTest(security.suite())
-    # suite.addTest(regression.suite())
+    suite.addTest(tests.suite())
+    suite.addTest(core_tags.suite())
+    suite.addTest(inheritance.suite())
+    suite.addTest(imports.suite())
+    suite.addTest(security.suite())
+    suite.addTest(regression.suite())
 
     return suite

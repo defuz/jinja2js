@@ -7,11 +7,6 @@ default_tests = {
 	"number": inline("typeof({{value}}) == 'number'"),
 	"string": inline("typeof({{value}}) == 'string'"),
 
-	# todo: ugly, but now it works
-	"escaped": function("""function(value) {
-        return Jinja.filters.escape(value) == value;
-    }""", include="tests", depends='filters.escape'),
-
 	"sequence": function("""function(value) {
         return typeof(value) == 'string' || typeof(value) == 'object';
 	}""", include="tests"),
