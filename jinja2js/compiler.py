@@ -432,7 +432,7 @@ class CodeGenerator(NodeVisitor):
 
 			vars = (loopvar,) * 4
 			self.line('var g%s = [];' % loopvar)
-			self.begin('for (f%s.i = 0; f%s.i < f%s.l; f%s.i++) {' % vars)
+			self.begin('for (f%s.i = 0; f%s.i < f%s.length; f%s.i++) {' % vars)
 
 			self.for_targets(node.target, loopvar, frame, 'f')
 			self.write('if (!')
@@ -452,7 +452,7 @@ class CodeGenerator(NodeVisitor):
 		self.write(');')
 
 		vars = (loopvar,) * 4
-		self.begin('for (%s.i = 0; %s.i < %s.l; %s.i++) {' % vars)
+		self.begin('for (%s.i = 0; %s.i < %s.length; %s.i++) {' % vars)
 
 		self.for_targets(node.target, loopvar, frame)
 		self.line('loop = %s;' % loopvar)

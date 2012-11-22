@@ -2,9 +2,9 @@
 import unittest
 
 from jinja2.testsuite import JinjaTestCase
-from jinja2 import TemplateSyntaxError, UndefinedError, DictLoader
+from jinja2 import DictLoader
 
-from jinja2js.testsuite import Environment
+from jinja2js.testsuite import Environment, JSTemplateRuntimeError
 
 env = Environment()
 
@@ -44,27 +44,18 @@ class ForLoopTestCase(JinjaTestCase):
 
     def test_cycling(self):
         tmpl = env.from_string('''{% for item in seq %}{{
-            loop.cycle('<1>', '<2>') }}{% endfor %}{%
-            for item in seq %}{{ loop.cycle(*through) }}{% endfor %}''')
-        output = tmpl.assert_render(seq=range(4), through=('<1>', '<2>'))
-        assert output == '<1><2>' * 4
+            loop.cycle('<1>', '<2>') }}{% endfor %}''')
+        output = tmpl.assert_render(seq=range(4))
+        assert output == '<1><2>' * 2
 
     def test_scope(self):
         tmpl = env.from_string('{% for item in seq %}{% endfor %}{{ item }}')
         output = tmpl.assert_render(seq=range(10))
         assert not output
 
-    def test_varlen(self):
-        def inner():
-            for item in range(5):
-                yield item
-        tmpl = env.from_string('{% for item in iter %}{{ item }}{% endfor %}')
-        output = tmpl.assert_render(iter=inner())
-        assert output == '01234'
-
     def test_noniter(self):
         tmpl = env.from_string('{% for item in none %}...{% endfor %}')
-        self.assert_raises(TypeError, tmpl.render)
+        self.assert_raises(JSTemplateRuntimeError, tmpl.render)
 
     def test_recursive(self):
         tmpl = env.from_string('''{% for item in seq recursive -%}
@@ -85,31 +76,25 @@ class ForLoopTestCase(JinjaTestCase):
         {%- endfor %}''')
         tmpl.assert_render(table=['ab', 'cd']) == '[1|1][1|2][2|1][2|2]'
 
-    def test_reversed_bug(self):
-        tmpl = env.from_string('{% for i in items %}{{ i }}'
-                               '{% if not loop.last %}'
-                               ',{% endif %}{% endfor %}')
-        tmpl.assert_render(items=reversed([3, 2, 1])) == '1,2,3'
-
     def test_loop_errors(self):
         tmpl = env.from_string('''{% for item in [1] if loop.index
                                       == 0 %}...{% endfor %}''')
-        self.assert_raises(UndefinedError, tmpl.render)
+        self.assert_raises(JSTemplateRuntimeError, tmpl.render)
         tmpl = env.from_string('''{% for item in [] %}...{% else
             %}{{ loop }}{% endfor %}''')
         tmpl.assert_render() == ''
 
     def test_loop_filter(self):
-        tmpl = env.from_string('{% for item in range(10) if item '
+        tmpl = env.from_string('{% for item in [0,1,2,3,4,5,6,7,8,9] if item '
                                'is even %}[{{ item }}]{% endfor %}')
         tmpl.assert_render() == '[0][2][4][6][8]'
         tmpl = env.from_string('''
-            {%- for item in range(10) if item is even %}[{{
+            {%- for item in [0,1,2,3,4,5,6,7,8,9] if item is even %}[{{
                 loop.index }}:{{ item }}]{% endfor %}''')
         tmpl.assert_render() == '[1:0][2:2][3:4][4:6][5:8]'
 
     def test_loop_unassignable(self):
-        self.assert_raises(TemplateSyntaxError, env.from_string,
+        self.assert_raises(JSTemplateRuntimeError, env.from_string,
                            '{% for loop in seq %}...{% endfor %}')
 
     def test_scoped_special_var(self):
@@ -243,23 +228,6 @@ class MacrosTestCase(JinjaTestCase):
             '{% macro test(foo) %}[{{ foo }}]{% endmacro %}'}))
         tmpl = self.env.from_string('{% from "include" import test %}{{ test("foo") }}')
         tmpl.assert_render() == '[foo]'
-
-    def test_macro_api(self):
-        tmpl = self.env.from_string('{% macro foo(a, b) %}{% endmacro %}'
-                               '{% macro bar() %}{{ varargs }}{{ kwargs }}{% endmacro %}'
-                               '{% macro baz() %}{{ caller() }}{% endmacro %}')
-        assert tmpl.module.foo.arguments == ('a', 'b')
-        assert tmpl.module.foo.defaults == ()
-        assert tmpl.module.foo.name == 'foo'
-        assert not tmpl.module.foo.caller
-        assert not tmpl.module.foo.catch_kwargs
-        assert not tmpl.module.foo.catch_varargs
-        assert tmpl.module.bar.arguments == ()
-        assert tmpl.module.bar.defaults == ()
-        assert not tmpl.module.bar.caller
-        assert tmpl.module.bar.catch_kwargs
-        assert tmpl.module.bar.catch_varargs
-        assert tmpl.module.baz.caller
 
     def test_callself(self):
         tmpl = self.env.from_string('{% macro foo(x) %}{{ x }}{% if x > 1 %}|'

@@ -31,16 +31,16 @@ default_utils = {
 	"loop": function("""function(iter) {
 		function LoopObject() {
 			this.iter = iter;
-			this.l = iter.length;
+			this.length = iter.length;
 			this.i = 0;
 			this.update = function() {
 				if (arguments.length) this.i = arguments[0];
 				this.index = this.i + 1;
 				this.index0 = this.i;
-				this.revindex = this.l - this.i;
-				this.revindex0 = this.l - this.i - 1;
+				this.revindex = this.length - this.i;
+				this.revindex0 = this.length - this.i - 1;
 				this.first = !this.i;
-				this.last = this.i == this.l - 1;
+				this.last = this.i == this.length - 1;
 			}
 			this.cycle = function() {
 				return arguments[this.index0 % arguments.length];

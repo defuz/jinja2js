@@ -74,7 +74,7 @@ class Environment(_Environment):
 
 def suite():
     from jinja2js.testsuite import \
-        core_tags, imports, inheritance, regression, security, filters, tests
+        core_tags, imports, inheritance, regression, filters, tests
 
     suite = unittest.TestSuite()
     suite.addTest(filters.suite())
@@ -82,7 +82,6 @@ def suite():
     suite.addTest(core_tags.suite())
     suite.addTest(inheritance.suite())
     suite.addTest(imports.suite())
-    suite.addTest(security.suite())
     suite.addTest(regression.suite())
 
     return suite
